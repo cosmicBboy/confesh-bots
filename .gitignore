@@ -1,5 +1,6 @@
 *tmp
 *.ipynb_checkpoints
+topic_modelling/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
