@@ -8,15 +8,16 @@ import unicodedata as utfd
 import re
 import string
 import nltk
+from argparse import ArgumentParser
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-
 stop_words = set(stopwords.words('english'))
 ps = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
+
 
 def to_ascii(text):
     return text.decode('utf-8')

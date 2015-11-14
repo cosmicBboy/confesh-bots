@@ -1,8 +1,8 @@
 # A Module for converting sql to csv
 
-read -p "Username: " SQL_USER
-read -s -p "Enter password: " SQL_PW
 read -p "DB: " DB
+DB1=holyokecon
+DB2=smithcon
 HOST=localhost
 OUTPUT_FP=./tmp
 
@@ -14,7 +14,7 @@ T5=confessional_codes
 
 for table in ${T1} ${T2} ${T3} ${T4} ${T5}
 do
-    sql2csv --db mysql+mysqlconnector://${SQL_USER}:${SQL_PW}@${HOST}/${DB}\
+    sql2csv --db mysql+mysqlconnector://`whoami`@${HOST}/${DB}\
         --query "SELECT * FROM ${table}"\
         > ./${OUTPUT_FP}/${DB}_$table.csv
 done
