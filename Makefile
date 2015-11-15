@@ -1,13 +1,12 @@
 PHONY: all
 
 HOST=localhost
-USER=`whoami`
+USER=root
 INIT_CMD1=ALTER USER 'root'@'localhost' IDENTIFIED BY 'tmppass';
 INIT_CMD2=CREATE USER '$(USER)'@'localhost' IDENTIFIED BY '';
 INIT_CMD3=GRANT ALL PRIVILEGES ON * . * TO '$(USER)'@'localhost';
 
-DATA_DUMP1=~/Dropbox/Confesh/data_dump/holyoke\ 10-16-15.sql
-DATA_DUMP2=~/Dropbox/Confesh/data_dump/smith\ 10-16-15.sql
+DATA_DUMP_FP=~/Downloads/*.sql
 
 DB1=holyokecon
 DB2=smithcon
@@ -37,19 +36,24 @@ sql-stop:
 	mysql.server stop
 
 data-dump:
-	mysql < $(DATA_DUMP1)
-	mysql < $(DATA_DUMP2)
+	for f in echo ${DATA_DUMP_FP}; \
+	do \
+		mysql -u ${USER} < $$f; \
+	done
 
 setup-pipeline:
-	mkdir tmp
+	mkdir $(OUTPUT_FP)
 
-sql2csv: setup-pipeline
+requirements:
+	pip2 install -r requirements.txt
+
+sql2csv:
 	for table in ${TABLES}; \
 	do \
-	    sql2csv --db mysql+mysqlconnector://${USER}@${HOST}/${DB1} \
+	    sql2csv --db mysql://${USER}@${HOST}/${DB1} \
 	        --query "SELECT * FROM $$table" \
 	        > ./${OUTPUT_FP}/${DB1}_$$table.csv; \
-	    sql2csv --db mysql+mysqlconnector://${USER}@${HOST}/${DB2} \
+	    sql2csv --db mysql://${USER}@${HOST}/${DB2} \
 	        --query "SELECT * FROM $$table" \
 	        > ./${OUTPUT_FP}/${DB2}_$$table.csv; \
 	done
