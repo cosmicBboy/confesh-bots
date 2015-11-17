@@ -1,4 +1,4 @@
- #!/usr/bin/python
+# !/usr/bin/python
 # -*- coding: utf-8 -*-
 
 '''A module for cleaning, tokenizing and feature selection'''
@@ -8,6 +8,7 @@ import unicodedata as utfd
 import re
 import string
 import nltk
+import textmining
 from argparse import ArgumentParser
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
@@ -90,7 +91,7 @@ class Preprocessor(object):
         return self
 
     def rm_numbers(self):
-        self.log_info("Removing Punctuation")
+        self.log_info("Removing Numbers")
         self.map(remove_numbers, 'confession', inplace=True)
         return self
 
@@ -162,16 +163,33 @@ class Preprocessor(object):
         for func_list in pipelines:
             for func in func_list:
                 func()
+        return self
+
+    def create_tdm(self, text_var):
+        '''
+        Restructures self.df to contain the following columns:
+        - Unique Identifier
+        - Outcome Variable
+        - Text Features
+        '''
+        tdm = textmining.TermDocumentMatrix()
+        for doc in self.df[text_var].apply(lambda x: " ".join(x)).iteritems():
+            tdm.add_doc(doc[1])
+        return tdm
+
+    def to_csv(self, fp, **kwargs):
+        self.output_df.to_csv(fp, **kwargs)
 
 
 if __name__ == "__main__":
-    fp = "./tmp/holyokecon_confessional_secrets.csv"
-    data = pd.read_csv(fp)
+    parser = ArgumentParser(description='Proprocessing Confesh text data')
+    parser.add_argument('-i', help='Input filepath')
+    parser.add_argument('-o', help='Output filepath')
+    args = parser.parse_args()
+    data = pd.read_csv(args.i)
+    data = data.head(20)
 
-    d = data.copy()
-    d = d.head(5)
-
-    p = Preprocessor(d)
+    p = Preprocessor(data)
 
     get_w_token_pipeline = [
         p.w_tokenize,
@@ -194,4 +212,6 @@ if __name__ == "__main__":
         # get_ws_token_pipeline
     )
 
-    print p.df['word_tokens']
+    tdm = p.create_tdm('stemmed_words')
+    for row in tdm.rows(cutoff=1):
+        print row

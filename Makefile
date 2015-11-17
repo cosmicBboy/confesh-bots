@@ -5,6 +5,7 @@ USER=root
 INIT_CMD1=ALTER USER 'root'@'localhost' IDENTIFIED BY 'tmppass';
 INIT_CMD2=CREATE USER '$(USER)'@'localhost' IDENTIFIED BY '';
 INIT_CMD3=GRANT ALL PRIVILEGES ON * . * TO '$(USER)'@'localhost';
+CHAR_SET=utf8
 
 DATA_DUMP_FP=~/Downloads/*.sql
 
@@ -50,12 +51,10 @@ requirements:
 sql2csv:
 	for table in ${TABLES}; \
 	do \
-	    sql2csv --db mysql://${USER}@${HOST}/${DB1} \
-	        --query "SELECT * FROM $$table" \
-	        > ./${OUTPUT_FP}/${DB1}_$$table.csv; \
-	    sql2csv --db mysql://${USER}@${HOST}/${DB2} \
-	        --query "SELECT * FROM $$table" \
-	        > ./${OUTPUT_FP}/${DB2}_$$table.csv; \
+	    sql2csv --db mysql://${USER}@${HOST}/${DB1}?charset=${CHAR_SET} \
+	        --query "SELECT * FROM $$table" > ./${OUTPUT_FP}/${DB1}_$$table.csv; \
+	    sql2csv --db mysql://${USER}@${HOST}/${DB2}?charset=${CHAR_SET} \
+	        --query "SELECT * FROM $$table" > ./${OUTPUT_FP}/${DB2}_$$table.csv; \
 	done
 
 clean:
