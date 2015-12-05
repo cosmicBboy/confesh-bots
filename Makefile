@@ -41,7 +41,7 @@ data-dump:
 	mysql < $(DATA_DUMP2)
 
 setup-pipeline:
-	mkdir tmp
+	mkdir -p $(OUTPUT_FP)/clean
 
 sql2csv: setup-pipeline
 	for table in ${TABLES}; \

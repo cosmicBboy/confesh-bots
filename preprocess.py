@@ -163,13 +163,22 @@ class Preprocessor(object):
             for func in func_list:
                 func()
 
+    def to_csv(self, output_fp, id_key, outcome_col, text_col, **kwargs):
+        self.df[text_col] = self.df[text_col].apply(lambda x: " ".join(x))
+        csv_df = self.df[[id_key, outcome_col, text_col]].copy()
+        csv_df.to_csv(output_fp, **kwargs)
+
 
 if __name__ == "__main__":
     fp = "./tmp/holyokecon_confessional_secrets.csv"
+    output_fp = "./tmp/clean/holyokecon_confessional_secret_tokens.csv"
     data = pd.read_csv(fp)
 
+    ID_KEY = "id"
+    OUTCOME_COLUMN = 'comments'
+    TEXT_COLUMN = "stemmed_words"
+
     d = data.copy()
-    d = d.head(5)
 
     p = Preprocessor(d)
 
@@ -194,4 +203,5 @@ if __name__ == "__main__":
         # get_ws_token_pipeline
     )
 
-    print p.df['word_tokens']
+    p.to_csv(output_fp, ID_KEY, OUTCOME_COLUMN, TEXT_COLUMN,
+             index=False, encoding='utf-8')
