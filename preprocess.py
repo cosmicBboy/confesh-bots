@@ -19,44 +19,55 @@ stop_words = set(stopwords.words('english'))
 ps = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 
+def pipeline_decorator(func):
+    def pipeline_wrapper(column, target, message):
+        return {'func': func,
+                'column': column,
+                'target': target,
+                'message': message}
+    return pipeline_wrapper
 
+@pipeline_decorator
 def to_ascii(text):
     return text.decode('utf-8')
 
+@pipeline_decorator
 def lowercase(text):
     return text.lower()
 
+@pipeline_decorator
 def remove_punctuation(text):
     regex = re.compile('[%s]' % re.escape(string.punctuation))
     return regex.sub("", text)
 
+@pipeline_decorator
 def remove_numbers(text):
     regex = re.compile('[0-9]')
     return regex.sub("", text)
 
+@pipeline_decorator
+def tokenize_words(text):
+    return word_tokenize(text)
+
+@pipeline_decorator
 def remove_word_len_thres(tokens, length=2):
     return [w for w in tokens if len(w) > length]
 
+@pipeline_decorator
 def remove_stopwords(tokens):
     return [w for w in tokens if w not in stop_words]
 
+@pipeline_decorator
 def remove_stopwords_in_sents(sent_token_list):
     return [remove_stopwords(s) for s in sent_token_list]
 
+@pipeline_decorator
 def stem_words(tokens):
     return [ps.stem(w) for w in tokens]
 
+@pipeline_decorator
 def lemmatize_words(tokens):
     return [lemmatizer.lemmatize(w) for w in tokens]
-
-def lemmatize_words_in_sents(tokens):
-    return [lema(w) for w in tokens]
-
-def stem_words_in_sents(sent_token_list):
-    return [lemmatize_words(s) for s in sent_token_list]
-
-def word_tokenize_sents(sent_list):
-    return [word_tokenize(s) for s in sent_list]
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
@@ -66,103 +77,34 @@ class Preprocessor(object):
 
     def __init__(self, dataframe):
         self.df = dataframe
-        self.to_ascii().to_lowercase().rm_punctuation().rm_numbers()
+        # self.to_ascii().to_lowercase().rm_punctuation().rm_numbers()
 
-    def map(self, func, col_name, target_col_name='', inplace=False):
-        if inplace:
+    def map(self, func, col_name, target_col_name=None):
+        '''
+        A mapping method that applies func to a col_name series.
+        If target_col_name is specified, then the result of the apply
+        is assigned to a new column. By default assigns new values to
+        col_name
+        '''
+        if not target_col_name:
             self.df[col_name] = self.df[col_name].apply(func)
+            print self.df[col_name].head()
         else:
             try:
                 self.df[target_col_name] = self.df[col_name].apply(func)
+                print self.df[target_col_name].head()
             except ValueError as e:
                 logging.error(e)
 
-    def log_info(self, message):
-        logging.info("%s" % (message))
-
-    def to_ascii(self):
-        self.log_info("Encoding to ascii")
-        self.map(to_ascii, 'confession', inplace=True)
-        return self
-
-    def rm_punctuation(self):
-        self.log_info("Removing Punctuation")
-        self.map(remove_punctuation, 'confession', inplace=True)
-        return self
-
-    def rm_numbers(self):
-        self.log_info("Removing Numbers")
-        self.map(remove_numbers, 'confession', inplace=True)
-        return self
-
-    def to_lowercase(self):
-        self.log_info("Making text lowercase")
-        self.map(lowercase, 'confession', inplace=True)
-        return self
-
-    def rm_words_threshold(self):
-        self.log_info("Removing words with length character of 2 or less")
-        self.map(remove_word_len_thres, 'word_tokens', inplace=True)
-
-    def rm_stopwords(self):
-        self.log_info("Removing stopwords from text")
-        self.map(remove_stopwords, 'word_tokens', inplace=True)
-        return self
-
-    def rm_stopwords_sents(self):
-        self.log_info("Removing stopwords sentences")
-        self.map(remove_stopwords_in_sents, 'word_sent_tokens', inplace=True)
-        return self
-
-    def s_tokenize(self):
-        self.log_info("Tokenizing sentences")
-        self.map(sent_tokenize, 'confession', 'sent_tokens')
-        return self
-
-    def s_count(self):
-        self.log_info("Counting sentences")
-        self.map(len, 'sent_tokens', 'num_sents')
-        return self
-
-    def w_tokenize(self):
-        self.log_info("Tokenizing words")
-        self.map(word_tokenize, 'confession', 'word_tokens')
-        return self
-
-    def w_tokenize_s(self):
-        self.log_info("Tokenizing words in sentences")
-        self.map(word_tokenize_sents, 'sent_tokens', 'word_sent_tokens')
-        return self
-
-    def w_stem(self):
-        self.log_info("Stemming words in text")
-        self.map(stem_words, 'word_tokens', 'stemmed_words')
-        return self
-
-    def w_stem_s(self):
-        self.log_info("Stemming words in sentences")
-        self.map(stem_words_in_sents, 'word_sent_tokens', 'stemmed_sents')
-        return self
-
-    def w_lemm(self):
-        self.log_info("Lemmatizing words in text")
-        self.map(lemmatize_words, 'word_tokens', 'stemmed_words')
-        return self
-
-    def w_lemm_s(self):
-        self.log_info("Lemmatizing words in sentences")
-        self.map(lemmatize_words_in_sents, 'word_sent_tokens', 'stemmed_sents')
-        return self
-
-    def w_pos_tag(self):
-        self.log_info("Part-of-speech tagging text")
-        self.map(nltk.pos_tag, 'word_tokens', 'pos_tag')
-        return self
-
     def run_pipelines(self, *pipelines):
         for func_list in pipelines:
-            for func in func_list:
-                func()
+            for func_dict in func_list:
+                logging.info(func_dict['message'])
+                print func_dict['func']
+                self.map(func_dict['func'],
+                         func_dict['column'],
+                         func_dict['target'])
+                print ""
         return self
 
     def create_tdm(self, text_var):
@@ -177,40 +119,50 @@ class Preprocessor(object):
             tdm.add_doc(doc[1])
         return tdm
 
-    def to_csv(self, fp, **kwargs):
-        self.output_df.to_csv(fp, **kwargs)
+    def to_csv(self, output_fp, id_key, outcome_col, text_col, **kwargs):
+        self.df[text_col] = self.df[text_col].apply(lambda x: " ".join(x))
+        csv_df = self.df[[id_key, outcome_col, text_col]].copy()
+        csv_df.to_csv(output_fp, **kwargs)
 
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Proprocessing Confesh text data')
     parser.add_argument('-i', help='Input filepath')
     parser.add_argument('-o', help='Output filepath')
+    parser.add_argument('-nrows', type=int, default=None,
+                        help='number of rows to read in')
     args = parser.parse_args()
-    data = pd.read_csv(args.i)
-    data = data.head(20)
+    output_fp = args.o
+    d = pd.read_csv(args.i, nrows=args.nrows)
 
-    p = Preprocessor(data)
+    ID_KEY = "id"
+    RAW_COLUMN = 'confession'
+    TOKEN_COLUMN = 'word_tokens'
+    CLEAN_COLUMN = "stemmed_words"
+    OUTCOME_COLUMN = 'comments'
 
-    get_w_token_pipeline = [
-        p.w_tokenize,
-        p.rm_words_threshold,
-        p.rm_punctuation,
-        p.rm_stopwords,
-        p.w_lemm,
+    p = Preprocessor(d)
+
+    preprocess_pipeline = [
+        to_ascii(RAW_COLUMN, None, "Encoding to ascii"),
+        lowercase(RAW_COLUMN, None, "Making text lowercase"),
+        remove_punctuation(RAW_COLUMN, None, "Removing Punctuation"),
+        remove_numbers(RAW_COLUMN, None, "Removing Numbers"),
     ]
 
-    get_ws_token_pipeline = [
-        p.s_tokenize,
-        p.s_count,
-        p.w_tokenize_s,
-        p.rm_stopwords_sents,
-        p.w_stem_s,
+    token_pipeline = [
+        tokenize_words(RAW_COLUMN, TOKEN_COLUMN, "Tokenizing words"),
+        remove_word_len_thres(TOKEN_COLUMN, None,
+                              "Removing words with 2 or less characters"),
+        remove_stopwords(TOKEN_COLUMN, None, "Removing stopwords from text"),
+        lemmatize_words(TOKEN_COLUMN, CLEAN_COLUMN,
+                        "Lemmatizing words in text"),
     ]
 
     p.run_pipelines(
-        get_w_token_pipeline,
-        # get_ws_token_pipeline
+        preprocess_pipeline,
+        token_pipeline,
     )
 
-    p.to_csv(output_fp, ID_KEY, OUTCOME_COLUMN, TEXT_COLUMN,
+    p.to_csv(output_fp, ID_KEY, OUTCOME_COLUMN, CLEAN_COLUMN,
              index=False, encoding='utf-8')
