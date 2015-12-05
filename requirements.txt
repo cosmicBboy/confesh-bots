@@ -1,0 +1,6 @@
+csvkit
+pandas
+sklearn
+nltk
+MySQL-python
+textmining
