@@ -12,6 +12,8 @@ DATA_DUMP2=~/Dropbox/Confesh/data_dump/smith\ 10-16-15.sql
 DB1=holyokecon
 DB2=smithcon
 OUTPUT_FP=./tmp
+RAW=$(OUTPUT_FP)/raw
+CLEAN=$(OUTPUT_FP)/clean
 
 TABLES=confessional_secrets \
 	   confessional_comments \
@@ -41,17 +43,17 @@ data-dump:
 	mysql < $(DATA_DUMP2)
 
 setup-pipeline:
-	mkdir -p $(OUTPUT_FP)/clean
+	mkdir -p $(RAW) $(CLEAN)
 
 sql2csv: setup-pipeline
 	for table in ${TABLES}; \
 	do \
 	    sql2csv --db mysql+mysqlconnector://${USER}@${HOST}/${DB1} \
 	        --query "SELECT * FROM $$table" \
-	        > ./${OUTPUT_FP}/${DB1}_$$table.csv; \
+	        > ./${RAW}/${DB1}_$$table.csv; \
 	    sql2csv --db mysql+mysqlconnector://${USER}@${HOST}/${DB2} \
 	        --query "SELECT * FROM $$table" \
-	        > ./${OUTPUT_FP}/${DB2}_$$table.csv; \
+	        > ./${RAW}/${DB2}_$$table.csv; \
 	done
 
 clean:
