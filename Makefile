@@ -69,8 +69,7 @@ preprocess-secrets:
 	for file in $($FNAMES); \
 	do \
 		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw confession --outcome comments \
-							 -nrows 20;\
+							 --id id --raw confession --outcome comments ;\
 	done
 
 preprocess-comments:
@@ -78,8 +77,7 @@ preprocess-comments:
 	for file in $($FNAMES); \
 	do \
 		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw comment --fk_keys secret_id \
-							 -nrows 20;\
+							 --id id --raw comment --fk_keys secret_id ;\
 	done
 
 preprocess-reports:
@@ -87,8 +85,7 @@ preprocess-reports:
 	for file in $($FNAMES); \
 	do \
 		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw reason --fk_keys secret_id comment_id \
-							 -nrows 20;\
+							 --id id --raw reason --fk_keys secret_id comment_id ;\
 	done
 
 preprocess: preprocess-secrets preprocess-comments preprocess-reports
