@@ -29,7 +29,7 @@ def pipeline_decorator(func):
 
 @pipeline_decorator
 def to_ascii(text):
-    return text.decode('utf-8')
+    return str(text).decode('utf-8')
 
 @pipeline_decorator
 def lowercase(text):
@@ -77,7 +77,6 @@ class Preprocessor(object):
 
     def __init__(self, dataframe):
         self.df = dataframe
-        # self.to_ascii().to_lowercase().rm_punctuation().rm_numbers()
 
     def map(self, func, col_name, target_col_name=None):
         '''
@@ -88,11 +87,11 @@ class Preprocessor(object):
         '''
         if not target_col_name:
             self.df[col_name] = self.df[col_name].apply(func)
-            print self.df[col_name].head()
+            logging.info("\n%s" % self.df[col_name].head())
         else:
             try:
                 self.df[target_col_name] = self.df[col_name].apply(func)
-                print self.df[target_col_name].head()
+                logging.info("\n%s" % self.df[target_col_name].head())
             except ValueError as e:
                 logging.error(e)
 
@@ -100,11 +99,10 @@ class Preprocessor(object):
         for func_list in pipelines:
             for func_dict in func_list:
                 logging.info(func_dict['message'])
-                print func_dict['func']
+                logging.info("%s" % func_dict['func'])
                 self.map(func_dict['func'],
                          func_dict['column'],
                          func_dict['target'])
-                print ""
         return self
 
     def create_tdm(self, text_var):
@@ -119,9 +117,16 @@ class Preprocessor(object):
             tdm.add_doc(doc[1])
         return tdm
 
-    def to_csv(self, output_fp, id_key, outcome_col, text_col, **kwargs):
-        self.df[text_col] = self.df[text_col].apply(lambda x: " ".join(x))
-        csv_df = self.df[[id_key, outcome_col, text_col]].copy()
+    def to_csv(self, output_fp, id_key, clean_col, outcome_col=None,
+               *fk_cols, **kwargs):
+        self.df[clean_col] = self.df[clean_col].apply(lambda x: " ".join(x))
+        if outcome_col:
+            csv_cols = [id_key, outcome_col, clean_col]
+        else:
+            csv_cols = [id_key, clean_col]
+        # extend list with foreign key columns if specified
+        csv_cols.extend(fk_cols)
+        csv_df = self.df[csv_cols].copy()
         csv_df.to_csv(output_fp, **kwargs)
 
 
@@ -129,17 +134,27 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Proprocessing Confesh text data')
     parser.add_argument('-i', help='Input filepath')
     parser.add_argument('-o', help='Output filepath')
+    parser.add_argument('--id', type=str, help='ID column key')
+    parser.add_argument('--raw', type=str, help='raw text column key')
+    parser.add_argument('--outcome', type=str, default=None,
+                        help='outcome variable column key')
+    parser.add_argument('--fk_keys', nargs='+', help='foreign key columns',
+                        default=[])
     parser.add_argument('-nrows', type=int, default=None,
                         help='number of rows to read in')
     args = parser.parse_args()
     output_fp = args.o
+    logging.info("Ingesting %s" % args.i)
     d = pd.read_csv(args.i, nrows=args.nrows)
 
-    ID_KEY = "id"
-    RAW_COLUMN = 'confession'
+    ID_KEY = args.id
+    RAW_COLUMN = args.raw
+    OUTCOME_COLUMN = args.outcome
+    FK_COLUMNS = args.fk_keys
+
+    # These should be fixed.
     TOKEN_COLUMN = 'word_tokens'
-    CLEAN_COLUMN = "stemmed_words"
-    OUTCOME_COLUMN = 'comments'
+    CLEAN_COLUMN = "clean_tokens"
 
     p = Preprocessor(d)
 
@@ -164,5 +179,5 @@ if __name__ == "__main__":
         token_pipeline,
     )
 
-    p.to_csv(output_fp, ID_KEY, OUTCOME_COLUMN, CLEAN_COLUMN,
-             index=False, encoding='utf-8')
+    p.to_csv(output_fp, ID_KEY, CLEAN_COLUMN, OUTCOME_COLUMN,
+             *FK_COLUMNS, index=False, encoding='utf-8')

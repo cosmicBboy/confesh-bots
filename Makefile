@@ -21,6 +21,8 @@ TABLES=confessional_secrets \
 	   confessional_reports \
 	   confessional_codes
 
+RAW_FILES=$(RAW)/*.csv
+
 install-sql:
 	brew install mysql
 
@@ -62,6 +64,38 @@ sql2csv:
 	        > ./${RAW}/${DB2}_$$table.csv; \
 	done
 
+preprocess-secrets:
+	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_secrets\.csv')) \
+	for file in $($FNAMES); \
+	do \
+		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+							 --id id --raw confession --outcome comments \
+							 -nrows 20;\
+	done
+
+preprocess-comments:
+	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_comments\.csv')) \
+	for file in $($FNAMES); \
+	do \
+		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+							 --id id --raw comment --fk_keys secret_id \
+							 -nrows 20;\
+	done
+
+preprocess-reports:
+	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_reports\.csv')) \
+	for file in $($FNAMES); \
+	do \
+		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+							 --id id --raw reason --fk_keys secret_id comment_id \
+							 -nrows 20;\
+	done
+
+preprocess: preprocess-secrets preprocess-comments preprocess-reports
+
 clean:
 	rm -rf ${OUTPUT_FP}
 
+# python preprocess.py -i './tmp/raw/holyokecon_confessional_secrets.csv' \
+# 					 -o './tmp/clean/holyokecon_secrets_tokens.csv' \
+# 					 -nrows 20

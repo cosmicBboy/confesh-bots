@@ -133,7 +133,6 @@ if __name__ == "__main__":
                              TARGET_COLUMN, FEATURE_COLUMN, **PARAMS)
 
     print pipeline.model
-
     pipeline.prepare_sparse_corpus(data)
     pipeline.prepare_learning_set()
     pipeline.train_model()
