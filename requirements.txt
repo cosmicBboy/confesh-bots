@@ -4,3 +4,4 @@ sklearn
 nltk
 MySQL-python
 textmining
+wordcloud
