@@ -1,7 +1,9 @@
 from gensim.models.ldamodel import LdaModel
 import pandas as pd
 
-experiment_name = 'lda_model_specs_secrets_pdd9'
+# TODO: convert this into a commandline tool
+
+experiment_name = 'lda_model_specs_secrets_pdd17'
 lda_model = LdaModel.load('./topic_modelling/models/%s.lda' % experiment_name)
 
 topic_num = 1

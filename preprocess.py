@@ -1,4 +1,4 @@
-# !/usr/bin/python
+ # !/usr/bin/python
 # -*- coding: utf-8 -*-
 
 '''A module for cleaning, tokenizing and feature selection'''
@@ -14,6 +14,10 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.stem import WordNetLemmatizer
+
+# These should be fixed.
+TOKEN_COLUMN = 'word_tokens'
+CLEAN_COLUMN = "clean_tokens"
 
 stop_words = set(stopwords.words('english'))
 ps = PorterStemmer()
@@ -151,10 +155,6 @@ if __name__ == "__main__":
     RAW_COLUMN = args.raw
     OUTCOME_COLUMN = args.outcome
     FK_COLUMNS = args.fk_keys
-
-    # These should be fixed.
-    TOKEN_COLUMN = 'word_tokens'
-    CLEAN_COLUMN = "clean_tokens"
 
     p = Preprocessor(d)
 
