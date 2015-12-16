@@ -41,6 +41,7 @@ else:
 # randomly sample 10 texts
 random.seed(42)
 doc_indices = [random.choice(filtered_text.index) for _ in range(10)]
+print doc_indices
 
 print ""
 for i in doc_indices:
