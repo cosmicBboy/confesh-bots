@@ -1,4 +1,4 @@
-PHONY: all
+		PHONY: all
 
 HOST=localhost
 USER=root
