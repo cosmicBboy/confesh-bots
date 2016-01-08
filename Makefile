@@ -1,13 +1,17 @@
-		PHONY: all
+PHONY: all
 
+# Mongo Variables
+DATA_DB=./mongo_db/data/db
+
+# MySql variables
 HOST=localhost
 USER=root
-INIT_CMD1=ALTER USER 'root'@'localhost' IDENTIFIED BY 'tmppass';
+INIT_CMD1=ALTER USER 'root'@'localhost' IDENTIFIED BY '';
 INIT_CMD2=CREATE USER '$(USER)'@'localhost' IDENTIFIED BY '';
 INIT_CMD3=GRANT ALL PRIVILEGES ON * . * TO '$(USER)'@'localhost';
 CHAR_SET=utf8
 
-DATA_DUMP_FP=~/Downloads/*.sql
+DATA_DUMP_FP=~/Dropbox/Confesh/data_dump/*.sql
 
 DB1=holyokecon
 DB2=smithcon
@@ -23,6 +27,16 @@ TABLES=confessional_secrets \
 
 RAW_FILES=$(RAW)/*.csv
 
+install-mongo:
+	brew install mongodb --with-openssl
+
+mongo-init:
+	mkdir -p $(DATA_DB)
+	mongod --dbpath $(DATA_DB)
+
+mongo-confesh:
+	mongo confesh.com:27107
+
 install-sql:
 	brew install mysql
 
@@ -35,13 +49,13 @@ sql-init: sql-stop
 	sudo rm -rf /usr/local/var/mysql
 	mysqld --initialize-insecure
 	mysql.server start
-	mysql -u root --execute "$(INIT_CMD1) $(INIT_CMD2) $(INIT_CMD3)"
+	# mysql -u root --execute "$(INIT_CMD1) $(INIT_CMD2) $(INIT_CMD3)"
 
 sql-stop:
 	mysql.server stop
 
 data-dump:
-	for f in echo ${DATA_DUMP_FP}; \
+	for f in ${DATA_DUMP_FP}; \
 	do \
 		mysql -u ${USER} < $$f; \
 	done
@@ -68,31 +82,27 @@ preprocess-secrets:
 	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_secrets\.csv')) \
 	for file in $($FNAMES); \
 	do \
-		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw confession --outcome comments ;\
+		python ingest/preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+							 		--id id --raw confession --outcome comments ;\
 	done
 
 preprocess-comments:
 	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_comments\.csv')) \
 	for file in $($FNAMES); \
 	do \
-		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw comment --fk_keys secret_id ;\
+		python ingest/preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+									--id id --raw comment --fk_keys secret_id ;\
 	done
 
 preprocess-reports:
 	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_reports\.csv')) \
 	for file in $($FNAMES); \
 	do \
-		python preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
-							 --id id --raw reason --fk_keys secret_id comment_id ;\
+		python ingest/preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
+									--id id --raw reason --fk_keys secret_id comment_id ;\
 	done
 
 preprocess: preprocess-secrets preprocess-comments preprocess-reports
 
 clean:
 	rm -rf ${OUTPUT_FP}
-
-# python preprocess.py -i './tmp/raw/holyokecon_confessional_secrets.csv' \
-# 					 -o './tmp/clean/holyokecon_secrets_tokens.csv' \
-# 					 -nrows 20
