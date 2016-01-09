@@ -1,5 +1,5 @@
 """
-Module for getting http responses from
+Module for parsing dreammoods html
 
 http://www.dreammoods.com/
 
