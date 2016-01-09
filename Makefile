@@ -35,7 +35,7 @@ mongo-init:
 	mongod --dbpath $(DATA_DB)
 
 mongo-confesh:
-	mongo confesh.com:27107
+	mongo confesh.com:27017
 
 install-sql:
 	brew install mysql

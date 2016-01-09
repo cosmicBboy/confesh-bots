@@ -5,3 +5,4 @@ nltk
 MySQL-python
 textmining
 wordcloud
+beautifulsoup4
