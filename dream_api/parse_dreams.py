@@ -5,28 +5,43 @@ http://www.dreammoods.com/
 
 author: Niels Bantilan
 """
+import logging
 import codecs
 import string
-import re
+import pandas as pd
 from bs4 import BeautifulSoup
+from collections import OrderedDict
+from argparse import ArgumentParser
 
-FORMAT_STRING = 'raw/dreams_{}.html'
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
+
+FORMAT_STRING = 'dreams_{}.html'
 TABLE_FORMAT = [u'html', u'td', u'tr', u'center', u'p', u'table', u'table']
+STOP_WORDS = ['TOP']
 
-def parse_all_dreams():
-    return [parse_dream(alpha) for alpha in string.ascii_lowercase]
+def parse_all_dreams(input_fp):
+    all_dreams_dict = OrderedDict()
+    all_dreams_list = [parse_dream(alpha, input_fp)
+                       for alpha in string.ascii_lowercase]
+    for ddict in all_dreams_list:
+        all_dreams_dict.update(ddict)
+    df = pd.DataFrame({"vocab": all_dreams_dict.keys(),
+                       "definitions": all_dreams_dict.values()})
+    return df[['vocab', 'definitions']]
 
 
-def parse_dream(alpha):
-    # print ">>>", alpha
-    soup = read_html(FORMAT_STRING.format(alpha))
+def parse_dream(alpha, input_fp):
+    dream_fp = "{}/{}".format(input_fp, FORMAT_STRING.format(alpha))
+    logging.info(dream_fp)
+    soup = read_html(dream_fp)
     result = soup.find_all(recursive=False)
     dream_format = [t.name for t in result]
     if dream_format == TABLE_FORMAT:
         result = parse_table_format(result, alpha)
     else:
         result = parse_paragraph_format(result, alpha)
-    result = find_vocab(result, alpha)
+    result = create_dream_corpus(result, alpha)
     return result
 
 
@@ -56,12 +71,49 @@ def parse_paragraph_format(soup, alpha):
     return prep_dream(result, alpha)
 
 
-def find_vocab(text_list, alpha, exclude_vocab=['to', 'tosee']):
-    vocab = [t for t in text_list if t[0] == alpha.upper()
-             and t.lower() not in exclude_vocab
-             and t.split()[0].lower() not in exclude_vocab
-             and len(t.split()) < 5]
-    return vocab
+def create_dream_corpus(text_list, alpha, exclude_vocab=['to', 'tosee']):
+    # vocab = {t:[] for t in text_list
+    #          if is_vocab(t, alpha, exclude_vocab)}
+    vocab = OrderedDict()
+    current_vocab = "null_vocab"
+    for t in text_list:
+        # The first element in text_list must be in vocab.keys()
+        if is_vocab(t, alpha, exclude_vocab):
+            current_vocab = t
+            vocab[current_vocab] = []
+        elif t in STOP_WORDS:
+            pass
+        else:
+            vocab[current_vocab].append(t.strip())
+
+    return prep_dream_corpus(vocab)
+
+
+def prep_dream_corpus(vocab_dict):
+    '''
+    Input:
+    A dictionary that assumes this structure:
+    {'vocab': ['definition_text1', 'definition_text2'], ...}
+
+    Output:
+    A dictionary with this structure:
+    {'vocab': 'definition', ...}
+    '''
+    dream_dict = OrderedDict()
+    for k, v in vocab_dict.items():
+        dream_dict[k.lower()] = " ".join(v).lower()
+    return dream_dict
+
+
+def is_vocab(text, alpha, exclude_vocab):
+    if (text[0] == alpha.upper() and
+        text.lower() not in exclude_vocab and
+        text.split()[0].lower() not in exclude_vocab and
+        len(text.split()) < 5):
+
+        return True
+    else:
+        return False
 
 
 def prep_dream(text_list, alpha):
@@ -78,6 +130,9 @@ def prep_dream(text_list, alpha):
     text_list = text_list.split('\n')
 
     # Remove all elements after the occurrence of 'Page'
+    # This is the simple algorithm we use to remove the extra text
+    # at the end of a dream page that doesn't hold any dream vocabulary
+    # or dream definitions
     try:
         page_index = text_list.index('Page')
         text_list = text_list[:page_index]
@@ -99,13 +154,12 @@ def soupify(response):
     return BeautifulSoup(response, 'html.parser')
 
 
-def find_terms():
-    pass
-
-
 if __name__ == "__main__":
-    dreams = parse_all_dreams()
-    for i, a in enumerate(string.ascii_lowercase):
-        print "<<<", a
-        print len(dreams[i])
-        print unicode(dreams[i]).encode('utf-8')
+    parser = ArgumentParser()
+    parser.add_argument('-i', help='dreams filepath', type=str)
+    parser.add_argument('-o', help='output filepath', type=str)
+    args = parser.parse_args()
+
+    dreams = parse_all_dreams(args.i)
+    logging.info("\n{}".format(dreams.head()))
+    dreams.to_csv(args.o, index=False, encoding='utf-8')

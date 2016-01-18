@@ -104,5 +104,11 @@ preprocess-reports:
 
 preprocess: preprocess-secrets preprocess-comments preprocess-reports
 
+scrape-dreams:
+	python dream_api/scrape_dreams.py
+
+parse-dreams:
+	python dream_api/parse_dreams.py -i dream_api/raw -o data/dream_corpus.csv
+
 clean:
 	rm -rf ${OUTPUT_FP}
