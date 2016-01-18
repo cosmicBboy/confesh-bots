@@ -19,11 +19,14 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 FORMAT_STRING = 'dreams_{}.html'
 TABLE_FORMAT = [u'html', u'td', u'tr', u'center', u'p', u'table', u'table']
 STOP_WORDS = ['TOP']
+EXCLUDE_VOCAB = ['to', 'tosee', 'please see']
 
 def parse_all_dreams(input_fp):
     all_dreams_dict = OrderedDict()
     all_dreams_list = [parse_dream(alpha, input_fp)
                        for alpha in string.ascii_lowercase]
+    # all_dreams_list = [parse_dream(alpha, input_fp)
+    #                    for alpha in ['l']]
     for ddict in all_dreams_list:
         all_dreams_dict.update(ddict)
     df = pd.DataFrame({"vocab": all_dreams_dict.keys(),
@@ -60,7 +63,7 @@ def parse_paragraph_format(soup, alpha):
     soup[5] element in the result list.
     '''
     result = [unicode(t.text).encode('ascii', 'ignore').strip()
-              for t in soup if t.name in ['p', 'strong']]
+              for t in soup if t.name in ['p', 'strong', 'font']]
     tmp = soup[5].find_all('p')
     include_table = len([p.text for p in tmp if p.text == alpha.upper()]) == 2
     if include_table:
@@ -71,18 +74,23 @@ def parse_paragraph_format(soup, alpha):
     return prep_dream(result, alpha)
 
 
-def create_dream_corpus(text_list, alpha, exclude_vocab=['to', 'tosee']):
-    # vocab = {t:[] for t in text_list
-    #          if is_vocab(t, alpha, exclude_vocab)}
+def create_dream_corpus(text_list, alpha, exclude_vocab=EXCLUDE_VOCAB):
     vocab = OrderedDict()
-    current_vocab = "null_vocab"
-    for t in text_list:
+    current_vocab = None
+    skip_word = ""
+    for i, t in enumerate(text_list):
         # The first element in text_list must be in vocab.keys()
+        if t == skip_word:
+            continue
         if is_vocab(t, alpha, exclude_vocab):
             current_vocab = t
+            next_word = text_list[i + 1]
+            if next_is_part_of_vocab(next_word, exclude_vocab):
+                current_vocab = " ".join([current_vocab, next_word])
+                skip_word = next_word
             vocab[current_vocab] = []
         elif t in STOP_WORDS:
-            pass
+            continue
         else:
             vocab[current_vocab].append(t.strip())
 
@@ -109,6 +117,19 @@ def is_vocab(text, alpha, exclude_vocab):
     if (text[0] == alpha.upper() and
         text.lower() not in exclude_vocab and
         text.split()[0].lower() not in exclude_vocab and
+        "\"" not in text and "," not in text and "." not in text and
+        len(text.split()) < 5):
+
+        return True
+    else:
+        return False
+
+
+def next_is_part_of_vocab(text, exclude_vocab):
+    if (text[0] in string.uppercase and
+        text.lower() not in exclude_vocab and
+        text.split()[0].lower() not in exclude_vocab and
+        "\"" not in text and "," not in text and "." not in text and
         len(text.split()) < 5):
 
         return True
