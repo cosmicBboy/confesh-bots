@@ -110,5 +110,8 @@ scrape-dreams:
 parse-dreams:
 	python dream_api/parse_dreams.py -i dream_api/raw -o data/dream_corpus.csv
 
+preprocess-dreams:
+	python dream_api/preprocess_dreams.py
+
 clean:
 	rm -rf ${OUTPUT_FP}

@@ -24,22 +24,63 @@ tendency to not finish what you started
 '''
 
 import pandas as pd
+import numpy as np
+import re
+import logging
 from nltk.tokenize import sent_tokenize
 
+from argparse import ArgumentParser
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
+
+STOP_PATTERNS =[
+    'please see',
+    'also',
+    'dream moods\' interpretation for',
+    'common dream themes:'
+]
+VOCAB_DELIMITER = ';'
 
 def parse_definition(definition):
     sents = sent_tokenize(definition)
     return sents
 
 
+def find_vocab(text, delim='or'):
+    # heuristic for finding vocab words: split by '.' and use string
+    # in the 0th index
+    text = text.split('.')[0]
+    text = re.sub('<end>', '', text)
+    for p in STOP_PATTERNS:
+        text = re.sub(p, '', text)
+    return VOCAB_DELIMITER.join(text.split(' {} '.format(delim)))
+
+
+def preprocess_dreams(dream_df):
+    dream_df.loc[ : , 'definitions'] = \
+        dream_df['definitions'].apply(lambda x: "{}{}".format(x, "<end>"))
+
+    # heuristic for extracting referral phrases
+    refer_df = dream_df[dream_df['definitions'].str.contains("please see")]
+    refer_extract = refer_df['definitions'].str.extract("(please see.+?<end>)")
+
+    # find vocab words
+    refer_vocab = refer_extract.apply(find_vocab)
+
+    # add column to dream_df
+    dream_df['redirect'] = pd.Series([np.nan for _ in range(dream_df.shape[0])])
+    dream_df.loc[refer_vocab.index, 'redirect'] = refer_vocab
+    dream_df.loc[ : , 'definitions'] = \
+        dream_df['definitions'].apply(lambda x: re.sub('<end>', '', x))
+    return dream_df
+
+
 if __name__ == "__main__":
-    dream_df = pd.read_csv('../data/dream_corpus.csv')
-    print dream_df.head(25)
+    parser = ArgumentParser()
+    parser.add_argument('-i', help='clean dreams filepath', type=str)
+    parser.add_argument('-o', help='complete dreams filepath', type=str)
+    args = parser.parse_args()
 
-    # REFER_PATTERN = '\*please'
-    # refer_df = dream_df['definitions'].str.contains(REFER_PATTERN)
-    # print refer_df
-
-    # definition = dream_df['definitions'][dream_df['vocab'] == 'abbey'].tolist()
-    # interpretations = parse_definition(definition[0])
-    # print interpretations
+    dream_df = pd.read_csv(args.i)
+    preprocess_dreams(dream_df).to_csv(args.o, index=False, encoding='utf-8')

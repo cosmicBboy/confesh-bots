@@ -177,8 +177,8 @@ def soupify(response):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('-i', help='dreams filepath', type=str)
-    parser.add_argument('-o', help='output filepath', type=str)
+    parser.add_argument('-i', help='raw dreams filepath', type=str)
+    parser.add_argument('-o', help='clean dreams filepath', type=str)
     args = parser.parse_args()
 
     dreams = parse_all_dreams(args.i)
