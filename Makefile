@@ -111,7 +111,11 @@ parse-dreams:
 	python dream_api/parse_dreams.py -i dream_api/raw -o data/dream_corpus.csv
 
 preprocess-dreams:
-	python dream_api/preprocess_dreams.py
+	python dream_api/preprocess_dreams.py -i data/dream_corpus.csv \
+										  -o data/dream_corpus_complete.csv
+
+run-dream-bot:
+	python dream_api/dream_bot.py
 
 clean:
 	rm -rf ${OUTPUT_FP}
