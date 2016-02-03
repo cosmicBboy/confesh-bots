@@ -84,7 +84,7 @@ def create_dream_corpus(text_list, alpha, exclude_vocab=EXCLUDE_VOCAB):
             continue
         if is_vocab(t, alpha, exclude_vocab):
             current_vocab = t
-            next_word = text_list[i + 1]
+            next_word = text_list[i + 1].strip()
             if next_is_part_of_vocab(next_word, exclude_vocab):
                 current_vocab = " ".join([current_vocab, next_word])
                 skip_word = next_word
@@ -93,7 +93,6 @@ def create_dream_corpus(text_list, alpha, exclude_vocab=EXCLUDE_VOCAB):
             continue
         else:
             vocab[current_vocab].append(t.strip())
-
     return prep_dream_corpus(vocab)
 
 
@@ -126,7 +125,7 @@ def is_vocab(text, alpha, exclude_vocab):
 
 
 def next_is_part_of_vocab(text, exclude_vocab):
-    if (text[0] in string.uppercase and
+    if (text.strip()[0] in string.uppercase and
         text.lower() not in exclude_vocab and
         text.split()[0].lower() not in exclude_vocab and
         "\"" not in text and "," not in text and "." not in text and
