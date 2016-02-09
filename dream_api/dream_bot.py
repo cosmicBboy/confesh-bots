@@ -65,18 +65,25 @@ import logging
 import time
 import os
 import pandas as pd
+import numpy as np
 import re
 import string
+import mongo_creds as creds
+from nltk.stem import PorterStemmer
+from argparse import ArgumentParser
 from collections import Counter, OrderedDict
 from nltk.corpus import stopwords
 from gensim.models import Word2Vec
 from nltk.tokenize import sent_tokenize, word_tokenize
 from pymongo import MongoClient
 
+ps = PorterStemmer()
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 stop_words = set(stopwords.words('english'))
+remove_regex_in_query = ['what does it mean']
 
 def read_mongo(domain, port, db_name, coll_name):
     return MongoClient(domain, port)[db_name][coll_name]
@@ -94,8 +101,10 @@ def scrub_text(text, len_thres=3):
     - remove numbers
     - remove punctuation
     '''
-    text = re.compile('[0-9]').sub("", text.lower())
-    text = re.compile('[%s]' % re.escape(string.punctuation)).sub("", text)
+    text = re.compile('[0-9]').sub(" ", text.lower())
+    text = re.compile('[%s\.]' % re.escape(string.punctuation)).sub(" ", text)
+    for regex in remove_regex_in_query:
+        text = re.compile(regex).sub(" ", text)
     return [w for w in word_tokenize(text)
             if w not in stop_words
             and w != 'dream'
@@ -113,51 +122,110 @@ def sent_word_tokenize(text):
     sentences = sent_tokenize(text)
     return [word_tokenize(s) for s in sentences]
 
-def parse_secret():
-    pass
+def match_query_to_dreams(query, dream_df, vocab):
+    query_tokens = [w for w in scrub_text(query) if w in VOCAB]
+    print "Query Tokens: {}".format(query_tokens)
+    query_tokens = query_tokens + [ps.stem(w) for w in query_tokens
+                                   if ps.stem(w) in VOCAB]
 
-def match_tokens_to_dreams():
-    pass
+    # Matching logic:
+    # -----------------
+    # 1. Subset dream definitions by selecting only entries whose 'vocab' term
+    #    is in the query_tokens list
+    # 2. Tokenize the sentences in dream definitions
+    dream_df = dream_df[dream_df['vocab']\
+        .apply(lambda x: True if x in query_tokens else False)]
+    dream_df.loc[:, 'sents'] = dream_df['definitions']\
+        .apply(sent_word_tokenize)
 
-def prep_dream_defitions():
-    pass
+    dream_match_index = [(i, j, " ".join(s)) for i, sent_list
+                         in dream_df['sents'].iteritems()
+                         for j, s in enumerate(sent_list)]
 
-def rank_interpretations():
-    pass
+    dream_match = pd.DataFrame(dream_match_index,
+                               columns=['index', 'sent_num', 'definition'])
+    dream_match.loc[:, 'sim'] = dream_match['definition']\
+        .apply(lambda x: compute_similarity(x, query_tokens, vocab))
+    return dream_match
+
+def compute_similarity(dream, query_tokens, vocab):
+    dream_tokens = [t1 for t1 in word_tokenize(dream) if t1 in vocab]
+    if len(dream) == 0:
+        return None
+    else:
+        return m.n_similarity(query_tokens, dream_tokens)
+
+def prep_dream_definitions(dream_match_df, top_n=3,
+                           sent_thres=1, sent_append_num=3):
+    top_dreams = dream_match_df[dream_match_df['sent_num'] < sent_thres]
+    top_dreams = top_dreams.sort_values('sim', ascending=False)
+    top_dreams = top_dreams.reset_index(drop=True)
+    top_index = [i for i in top_dreams.index if i in range(top_n)]
+    top_dreams = top_dreams.iloc[top_index]
+    top_dreams = top_dreams.apply(
+        lambda row: append_more_sentences(
+            row, dream_match_df, sent_append_num), axis=1
+        )
+    print(top_dreams)
+    return top_dreams.tolist()
+
+def append_more_sentences(top_dream_row, dream_df, sent_append_num):
+    index = top_dream_row['index']
+    i_start = top_dream_row['sent_num']
+    i_end = i_start + sent_append_num
+
+    # conditions
+    c1 = (dream_df['sent_num'] >= i_start)
+    c2 = (dream_df['sent_num'] < i_end)
+    c3 = (dream_df['index'] == index)
+    append_sents = dream_df[c1 & c2 &c3]['definition'].tolist()
+    return " ".join(append_sents)
 
 def insert_interpretation():
     pass
 
 
 if __name__ == "__main__":
+
+    parser = ArgumentParser(description='A CLI tool for DreamBot')
+    parser.add_argument('-db', help='name of db')
+    parser.add_argument('-c', help='collection name')
+    parser.add_argument('-m', help='model filepath')
+    parser.add_argument('-dr', help='dream corpus filepath')
+
+    args = parser.parse_args()
+
     start = time.time()
-    collection = read_mongo('confesh.com', 27017, 'confesh-db', 'confession')
+    collection = read_mongo(creds.domain, creds.port,
+                            args.db, args.c)
     confesh_corpus = read_dream_corpus(collection, {'communities': 'dreams'},
                                        projection={'text': 1, '_id': 0})
-    print "Time taken to read mongo: {}".format(time.time() - start)
+    logging.info("Time taken to read mongo: {}".format(time.time() - start))
 
     model_options = {
-        'min_count': 2,
+        'min_count': 1,
         'size': 100,
         'alpha': 0.025,
         'window': 5,
-        'min_count': 5,
-        'max_vocab_size': None, }
+        'max_vocab_size': None
+    }
 
     start = time.time()
-    model_fp = 'dream_api/models/dream_bot_v0.1'
-    d_fp = './data/dream_corpus_complete.csv'
+    model_fp = args.m
+    d_fp = args.dr
     dream_df = pd.read_csv(d_fp)
     dream_corpus = [scrub_text(d) for d in dream_df['definitions']]
 
     confesh_dream_corpus = dream_corpus + confesh_corpus
 
+    # if file exists, load the file
     if os.path.isfile(model_fp):
         m = load_model(Word2Vec, model_fp)
     else:
         m = train_model(Word2Vec, confesh_dream_corpus, model_fp,
                         **model_options)
-    print "Time taken for model training: {}".format(time.time() - start)
+    logging.info(
+        "Time taken for model training: {}".format(time.time() - start))
 
     VOCAB = m.vocab.keys()
     c = Counter()
@@ -168,35 +236,31 @@ if __name__ == "__main__":
 
     start = time.time()
     # query = 'I dream of giving birth to a beautiful baby girl'
-    query = 'I dream of poop and snake'
-    query_tokens = [w for w in scrub_text(query) if w in VOCAB]
-    print query
-    dream_subset_raw = dream_df[dream_df['vocab']\
-        .apply(lambda x: True if x in query_tokens else False)]['definitions']
+    # query = 'I dream of poop and snake'
+    # query = "I dreamt that I was preparing soup but the fish I was using " +\
+    #         "everybody around was complaining of it's bad small but I kept " +\
+    #         "on insisting the fish was good because I couldn't smell it. " +\
+    #         "please explain"
+    # query = "I dreamed that I sold my bed and just had the mattress left. " +\
+    #         "What does selling a bed mean?"
+    # query = "Dreamt of catching two young birds"
+    # query = "I dreamt my dead mother bought groceries  and put it in my " +\
+    #         "bedroom in the house i sold about 15 years ago. There was " +\
+    #         "plenty white cobweb and i started to clean up."
+    # query = "I saw myself riding a car in my dream with few family members"
+    # query = "I dreamed I was between two live lions in cages"
+    # query = "i always have a dream about my dress im looking out to my " +\
+    #         "mothers cabinet...what does it means.."
+    # query = "Had nightmare lastnight. That human became so tiny and all the "+\
+    #         "animals became as tall as human. The animals appeared in my " +\
+    #         "dream are the lizard, Dog, and monkey. They all ate tiny human "+\
+    #         "being. In my dream I was safe cos I went up the tree. The dog " +\
+    #         "and the monkey wants to eat me..."
 
-    # Number of sentences to include in the subset corpus.
-    # this is because some interpretations are long and after a few sentences
-    # the sentence recommendations are a little noise
-    sentence_threshold = 2
+    dream_subset_sents = match_query_to_dreams(query, dream_df, VOCAB)
+    top_hits = prep_dream_definitions(dream_subset_sents)
+    print "Query: {}".format(query)
+    for i, hit in enumerate(top_hits):
+        print "{}: {}".format(i, hit)
 
-    dream_subset_sents = dream_subset_raw.apply(sent_word_tokenize).tolist()
-    flat_subset_sents = [" ".join(sent) for dream in dream_subset_sents
-                         for sent in dream[:sentence_threshold]]
-    dream_subset_sents = [scrub_text(sent) for sent in flat_subset_sents]
-
-    for i, d in enumerate(dream_subset_sents):
-        dream = [t1 for t1 in d if t1 in VOCAB]
-        if len(dream) == 0:
-            continue
-        else:
-            sim.append([m.n_similarity(query_tokens, dream), i])
-
-    sim.sort(key=lambda item: -item[0])
-    top_hits = [tup[1] for tup in sim[:5]]
-    print query
-    print top_hits
-    count = 1
-    for i, hit in pd.Series(flat_subset_sents).loc[top_hits].iteritems():
-        print "{}: {}".format(count, hit)
-        count += 1
-    print "Time taken for query: {}".format(time.time() - start)
+    logging.info("Time taken for query: {}".format(time.time() - start))

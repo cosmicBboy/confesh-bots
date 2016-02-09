@@ -2,6 +2,8 @@
 *.ipynb_checkpoints
 topic_modelling/
 
+mongo_creds.py
+
 # Data
 data/
 

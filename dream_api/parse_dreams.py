@@ -4,6 +4,8 @@ Module for parsing dreammoods html
 http://www.dreammoods.com/
 
 author: Niels Bantilan
+
+TODO: use "TOP" as a dream entry delimiter
 """
 import logging
 import codecs
@@ -52,7 +54,7 @@ def parse_table_format(soup, alpha):
     soup = soup[-2].find('table').find_all('td', attrs={'width': '750'})
     soup = soup[0].find_all('p', recursive=False)
     result = [unicode(t.text).encode('ascii', 'ignore').strip()
-              for t in soup if t.name in ['p']]
+              for t in soup if t.name in ['p', 'strong', 'font']]
     return prep_dream(result, alpha)
 
 
@@ -79,8 +81,8 @@ def create_dream_corpus(text_list, alpha, exclude_vocab=EXCLUDE_VOCAB):
     current_vocab = None
     skip_word = ""
     for i, t in enumerate(text_list):
-        # The first element in text_list must be in vocab.keys()
         if t == skip_word:
+            skip_word = ""
             continue
         if is_vocab(t, alpha, exclude_vocab):
             current_vocab = t
@@ -132,6 +134,8 @@ def next_is_part_of_vocab(text, exclude_vocab):
         len(text.split()) < 5):
 
         return True
+    if ('of' in text.split()[0]):
+        return True
     else:
         return False
 
@@ -160,7 +164,6 @@ def prep_dream(text_list, alpha):
         pass
 
     text_list = [t for t in text_list if not t.strip() == ""]
-
     return text_list
 
 
