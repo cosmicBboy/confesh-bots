@@ -67,6 +67,7 @@ import os
 import pandas as pd
 import numpy as np
 import re
+import json
 import string
 import mongo_creds as creds
 from nltk.stem import PorterStemmer
@@ -113,6 +114,9 @@ def scrub_text(text, len_thres=3):
 def train_model(model, scrubbed_cursor, save_fp, **model_opts):
     m = model(scrubbed_cursor, **model_opts)
     m.save(save_fp)
+    params_fp = "{}{}".format(model_fp, ".json")
+    with open(params_fp, 'wb') as f:
+        f.write(json.dumps(model_opts, indent=4))
     return m
 
 def load_model(model, fp):
@@ -124,7 +128,6 @@ def sent_word_tokenize(text):
 
 def match_query_to_dreams(query, dream_df, vocab):
     query_tokens = [w for w in scrub_text(query) if w in VOCAB]
-    print "Query Tokens: {}".format(query_tokens)
     query_tokens = query_tokens + [ps.stem(w) for w in query_tokens
                                    if ps.stem(w) in VOCAB]
 
@@ -162,12 +165,30 @@ def prep_dream_definitions(dream_match_df, top_n=3,
     top_dreams = top_dreams.reset_index(drop=True)
     top_index = [i for i in top_dreams.index if i in range(top_n)]
     top_dreams = top_dreams.iloc[top_index]
-    top_dreams = top_dreams.apply(
+    top_dreams.loc[:, 'definition'] = top_dreams.apply(
         lambda row: append_more_sentences(
             row, dream_match_df, sent_append_num), axis=1
         )
-    print(top_dreams)
-    return top_dreams.tolist()
+    top_dreams.loc[:, 'definition'] = postprocess_dreams(
+        top_dreams['definition'].tolist())
+    return top_dreams
+
+def postprocess_dreams(dream_interp_list):
+    # d_list = [sent_tokenize(s) for s in dream_interp_list]
+    d_list = [sent.split('.') for sent in dream_interp_list]
+    d_list = [[s for s in sent if s != ""] for sent in d_list]
+    d_list = map(
+        lambda sent_list: [format_dream_string(s) for s in sent_list], d_list)
+    # join sentences by " "
+    return [" ".join(d) for d in d_list]
+
+def format_dream_string(text):
+    text = text.strip()
+    text = text.capitalize()
+    text = "{}.".format(text)
+    text = re.compile(r'\ ([%s])' % re.escape(string.punctuation)).sub(r"\1", text)
+    return text
+
 
 def append_more_sentences(top_dream_row, dream_df, sent_append_num):
     index = top_dream_row['index']
@@ -202,12 +223,24 @@ if __name__ == "__main__":
                                        projection={'text': 1, '_id': 0})
     logging.info("Time taken to read mongo: {}".format(time.time() - start))
 
+
     model_options = {
-        'min_count': 1,
-        'size': 100,
+        'size': 20,
         'alpha': 0.025,
         'window': 5,
-        'max_vocab_size': None
+        'min_count': 3,
+        'max_vocab_size': None,
+        'sample': 0,
+        'seed': 1,
+        'workers': 1,
+        'min_alpha': 0.0001,
+        'sg': 0,
+        'hs': 1,
+        'negative': 0,
+        'cbow_mean': 0,
+        'null_word': 0,
+        'iter': 20,
+        'trim_rule': None,
     }
 
     start = time.time()
@@ -224,6 +257,7 @@ if __name__ == "__main__":
     else:
         m = train_model(Word2Vec, confesh_dream_corpus, model_fp,
                         **model_options)
+
     logging.info(
         "Time taken for model training: {}".format(time.time() - start))
 
@@ -235,32 +269,34 @@ if __name__ == "__main__":
     sim = []
 
     start = time.time()
-    # query = 'I dream of giving birth to a beautiful baby girl'
-    # query = 'I dream of poop and snake'
-    # query = "I dreamt that I was preparing soup but the fish I was using " +\
-    #         "everybody around was complaining of it's bad small but I kept " +\
-    #         "on insisting the fish was good because I couldn't smell it. " +\
-    #         "please explain"
-    # query = "I dreamed that I sold my bed and just had the mattress left. " +\
-    #         "What does selling a bed mean?"
-    # query = "Dreamt of catching two young birds"
-    # query = "I dreamt my dead mother bought groceries  and put it in my " +\
-    #         "bedroom in the house i sold about 15 years ago. There was " +\
-    #         "plenty white cobweb and i started to clean up."
-    # query = "I saw myself riding a car in my dream with few family members"
-    # query = "I dreamed I was between two live lions in cages"
-    # query = "i always have a dream about my dress im looking out to my " +\
-    #         "mothers cabinet...what does it means.."
-    # query = "Had nightmare lastnight. That human became so tiny and all the "+\
-    #         "animals became as tall as human. The animals appeared in my " +\
-    #         "dream are the lizard, Dog, and monkey. They all ate tiny human "+\
-    #         "being. In my dream I was safe cos I went up the tree. The dog " +\
-    #         "and the monkey wants to eat me..."
+    queries = [
+        "I dream of giving birth to a beautiful baby girl",
+        "I dream of poop and snake",
+        "I dreamt that I was preparing soup but the fish I was using everybody \
+        around was complaining of it's bad small but I kept on insisting the fish \
+        was good because I couldn't smell it please explain",
+        "I dreamed that I sold my bed and just had the mattress left. What does \
+        selling a bed mean?",
+        "Dreamt of catching two young birds",
+        "I dreamt my dead mother bought groceries  and put it in my bedroom in \
+        the house i sold about 15 years ago. There was plenty white cobweb and i \
+        started to clean up.",
+        "I saw myself riding a car in my dream with few family members",
+        "I dreamed I was between two live lions in cages",
+        "i always have a dream about my dress im looking out to my mothers \
+        cabinet...what does it means..",
+        "Had nightmare lastnight. That human became so tiny and all the animals \
+        became as tall as human. The animals appeared in my dream are the lizard, \
+        Dog, and monkey. They all ate tiny human being. In my dream I was safe \
+        cos I went up the tree. The dog and the monkey wants to eat me..."
+    ]
 
-    dream_subset_sents = match_query_to_dreams(query, dream_df, VOCAB)
-    top_hits = prep_dream_definitions(dream_subset_sents)
-    print "Query: {}".format(query)
-    for i, hit in enumerate(top_hits):
-        print "{}: {}".format(i, hit)
+    for query in queries:
+        dream_subset_sents = match_query_to_dreams(query, dream_df, VOCAB)
+        top_hits = prep_dream_definitions(dream_subset_sents)
+        print "Query: {}".format(query)
+        for i, row in top_hits.iterrows():
+            print "similarity score: {}\n{}".format(row['sim'], row['definition'])
+        print "\n"
 
     logging.info("Time taken for query: {}".format(time.time() - start))

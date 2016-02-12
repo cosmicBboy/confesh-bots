@@ -1,6 +1,7 @@
 *tmp
 *.ipynb_checkpoints
 topic_modelling/
+dream_api/models/*
 
 mongo_creds.py
 
