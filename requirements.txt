@@ -7,3 +7,4 @@ textmining
 wordcloud
 beautifulsoup4
 pymongo
+inflect

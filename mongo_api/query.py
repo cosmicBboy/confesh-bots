@@ -2,8 +2,9 @@ import json
 from argparse import ArgumentParser
 from pymongo import MongoClient
 from mongo_creds import domain, port
+from bson.objectid import ObjectId
 
-FIELD_LIST = ['_id', 'text']
+FIELD_LIST = ['_id', 'text', 'comments']
 
 def create_confesh_stream(db_name, collection_name, query, **kwargs):
     coll_obj = fetch_collection(db_name, collection_name)
@@ -28,7 +29,10 @@ def text_stream_cursor(cursor, field_list, n=5):
                if k in field_list}
 
 if __name__ == "__main__":
-    confesh_stream = create_confesh_stream('confesh-db', 'confession',
-                                           {'communities': 'dreams'})
+    # Example queries:
+    # query = {'communities': 'bots'}
+
+    query = {'_id': ObjectId('56b9565ae4b01c56828d8584')}
+    confesh_stream = create_confesh_stream('confesh-db', 'confession', query)
     for result in confesh_stream:
         print result
