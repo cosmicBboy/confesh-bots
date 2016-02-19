@@ -72,6 +72,7 @@ import string
 import mongo_creds as creds
 import inflect
 import uuid
+from os import path
 from bson.objectid import ObjectId
 from datetime import datetime
 from nltk.corpus import wordnet as wn
@@ -83,6 +84,8 @@ from gensim.models import Word2Vec
 from nltk.tokenize import sent_tokenize, word_tokenize
 from pymongo import MongoClient
 from confesh_api import fetch_auth_token, post_comment
+
+DATETIME_THRES = datetime(2015, 12, 31, 0, 00, 00, 000000)
 
 ps = PorterStemmer()
 inflect_engine = inflect.engine()
@@ -161,21 +164,19 @@ def sent_word_tokenize(text):
 
 
 def create_query_tokens(query, vocab):
-    query_tokens = [w for w in scrub_text(query) if w in vocab]
+    query_tokens = [w for w in scrub_text(query)]
 
     # add stemmed tokens
-    stemmed_tokens= [ps.stem(w) for w in query_tokens
-                     if ps.stem(w) in vocab]
+    stemmed_tokens= [ps.stem(w) for w in query_tokens]
 
     # add pluralized stemmed tokens
-    plurals = [inflect_engine.plural(w) for w in stemmed_tokens
-               if inflect_engine.plural(w) in vocab]
-    return set(query_tokens + stemmed_tokens + plurals)
+    plurals = [inflect_engine.plural(w) for w in stemmed_tokens]
+    return [t for t in set(query_tokens + stemmed_tokens + plurals)
+            if t in vocab]
 
 
 def interpret_dream(query, vocab):
     query_tokens = create_query_tokens(query, vocab)
-    print query_tokens
     dream_subset_sents = match_query_to_dreams(query_tokens,
                                                dream_df, vocab)
     top_hits = prep_dream_definitions(dream_subset_sents)
@@ -282,6 +283,29 @@ def append_more_sentences(top_dream_row, dream_df, sent_append_num):
     return " ".join(append_sents)
 
 
+def write_to_dream_log(fp, secret_id):
+    if path.isfile(fp):
+        mode = "a"
+    else:
+        mode = "wb"
+    with open(fp, mode) as f:
+        f.write("{}\n".format(secret_id))
+
+def read_dream_log(fp):
+    with open(fp, 'rb') as f:
+        return [l.replace('\n', '') for l in f.readlines()]
+
+
+def dream_passes_filter(post_object, datetime_thres=DATETIME_THRES):
+    if post_object['timestamp'] < DATETIME_THRES:
+        return False
+    elif any([c.get('avatar', None)
+         for c in post_object.get('comments', [dict()]) ]):
+        return False
+    else:
+        return True
+
+
 if __name__ == "__main__":
 
     parser = ArgumentParser(description='A CLI tool for DreamBot')
@@ -316,7 +340,7 @@ if __name__ == "__main__":
         "seed": 1,
         "hs": 1,
         "max_vocab_size": None,
-        "min_count": 3,
+        "min_count": 0,
         "size": 20,
         "sg": 0,
         "cbow_mean": 0,
@@ -326,6 +350,7 @@ if __name__ == "__main__":
     start = time.time()
     model_fp = args.m
     d_fp = args.dr
+    log_fp = args.id_log
     dream_df = pd.read_csv(d_fp)
     dream_corpus = [scrub_text(d) for d in dream_df['definitions']]
 
@@ -350,16 +375,34 @@ if __name__ == "__main__":
 
     start = time.time()
 
+
+    # read dream log file
+    if path.isfile(log_fp):
+        dreams_already_interpreted = read_dream_log(log_fp)
+    else:
+        dreams_already_interpreted = []
+    logging.info('Dreams already interpreted:')
+    for d in dreams_already_interpreted:
+        logging.info(d)
+
     # get auth token to post comments to confesh
     auth_token = fetch_auth_token()
 
     for post in dream_test_corpus:
-        if 'dreambot test' in post['text'].lower():
+        secret_id = str(post['_id'])
+
+        # logic for logging
+        if secret_id in dreams_already_interpreted:
+            continue
+        else:
+            logging.info('Logging dream: {}'.format(secret_id))
+            write_to_dream_log(log_fp, secret_id)
+
+        # logic for interpretation and commenting
+        if dream_passes_filter(post):
             print post['text']
             interpretation = interpret_dream(post['text'], VOCAB)
-            secret_id = str(post['_id'])
+            print interpretation
             post_comment(secret_id, auth_token, interpretation)
-            # TODO add logic for detecting whether a post has comments
-            # of with comment['avatar'] field
 
     logging.info("Time taken for query: {}".format(time.time() - start))

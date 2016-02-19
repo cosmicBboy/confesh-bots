@@ -1,10 +1,10 @@
 PHONY: all
 
-DBNAME='confesh-db'
-COLLECTION='confession'
-DREAM_FP='../data/dream_corpus_complete.csv'
-MODEL_FP='./models/dream_bot_v'
-DREAM_LOG='./dream_log.txt'
+DBNAME=confesh-db
+COLLECTION=confession
+DREAM_FP=../data/dream_corpus_complete.csv
+MODEL_FP=./models/dream_bot_v
+DREAM_LOG=./dream_log.txt
 
 run-dream-bot:
 	python -W ignore dream_bot.py -db $(DBNAME) \
