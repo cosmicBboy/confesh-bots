@@ -15,3 +15,7 @@ run-dream-bot:
 
 clean-model:
 	rm $(MODEL_FP)$(VERSION)
+
+docker-build:
+	sudo apt-get update
+	sudo apt-get install git tree docker.io

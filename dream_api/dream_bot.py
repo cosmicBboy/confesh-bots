@@ -232,12 +232,10 @@ def prep_dream_definitions(dream_match_df, top_n=5,
 
 
 def postprocess_dreams(dream_interp_list):
-    # d_list = [sent_tokenize(s) for s in dream_interp_list]
     d_list = [sent.split('.') for sent in dream_interp_list]
     d_list = [[s for s in sent if s != ""] for sent in d_list]
     d_list = map(
         lambda sent_list: [format_dream_string(s) for s in sent_list], d_list)
-    # join sentences by " "
     return [" ".join(d) for d in d_list]
 
 
@@ -340,7 +338,7 @@ if __name__ == "__main__":
         "seed": 1,
         "hs": 1,
         "max_vocab_size": None,
-        "min_count": 0,
+        "min_count": 1,
         "size": 20,
         "sg": 0,
         "cbow_mean": 0,
