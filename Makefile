@@ -27,6 +27,10 @@ TABLES=confessional_secrets \
 
 RAW_FILES=$(RAW)/*.csv
 
+install-docker-deps:
+       sudo apt-get update
+       sudo apt-get install git tree docker.io
+
 install-mongo:
 	brew install mongodb --with-openssl
 

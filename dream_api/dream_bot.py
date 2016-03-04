@@ -72,6 +72,7 @@ import string
 import mongo_creds as creds
 import inflect
 import uuid
+import sys
 from os import path
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -91,7 +92,7 @@ ps = PorterStemmer()
 inflect_engine = inflect.engine()
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
-                    level=logging.INFO)
+                    level=logging.INFO, stream=sys.stdout)
 
 stop_words = set(stopwords.words('english'))
 remove_regex_in_query = [
@@ -111,6 +112,7 @@ mongo_comment_schema = OrderedDict({
     u'_id': None,
     u'timestamp': None,
 })
+
 
 def fetch_collection(domain, port, db_name, coll_name):
     return MongoClient(domain, port)[db_name][coll_name]
@@ -303,7 +305,6 @@ def dream_passes_filter(post_object, datetime_thres=DATETIME_THRES):
     else:
         return True
 
-
 if __name__ == "__main__":
 
     parser = ArgumentParser(description='A CLI tool for DreamBot')
@@ -324,7 +325,7 @@ if __name__ == "__main__":
     dream_test_corpus = generate_dream_collection_for_insert(
         collection, {'communities': 'bots'})
 
-    logging.info("Time taken to read mongo: {}".format(time.time() - start))
+    print("Time taken to read mongo: {}".format(time.time() - start))
 
     model_options = {
         "alpha": 0.025,
@@ -361,7 +362,7 @@ if __name__ == "__main__":
         m = train_model(Word2Vec, confesh_dream_corpus, model_fp,
                         **model_options)
 
-    logging.info(
+    print(
         "Time taken for model training: {}".format(time.time() - start))
 
     VOCAB = m.vocab.keys()
@@ -379,9 +380,8 @@ if __name__ == "__main__":
         dreams_already_interpreted = read_dream_log(log_fp)
     else:
         dreams_already_interpreted = []
-    logging.info('Dreams already interpreted:')
-    for d in dreams_already_interpreted:
-        logging.info(d)
+    print('Dreams already interpreted:')
+    print(dreams_already_interpreted)
 
     # get auth token to post comments to confesh
     auth_token = fetch_auth_token()
@@ -393,7 +393,7 @@ if __name__ == "__main__":
         if secret_id in dreams_already_interpreted:
             continue
         else:
-            logging.info('Logging dream: {}'.format(secret_id))
+            print('Logging dream: {}'.format(secret_id))
             write_to_dream_log(log_fp, secret_id)
 
         # logic for interpretation and commenting
@@ -403,4 +403,4 @@ if __name__ == "__main__":
             print interpretation
             post_comment(secret_id, auth_token, interpretation)
 
-    logging.info("Time taken for query: {}".format(time.time() - start))
+    print("Time taken for query: {}".format(time.time() - start))
