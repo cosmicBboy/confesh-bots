@@ -8,3 +8,4 @@ wordcloud
 beautifulsoup4
 pymongo
 inflect
+bson
