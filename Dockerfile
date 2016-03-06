@@ -10,19 +10,16 @@ RUN sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
     gfortran emacs
 
 # Install pyenv python virtual environment management utility
+ENV PYENV_ROOT /root/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 RUN curl -L https://raw.githubusercontent.com/yyuu/pyenv-installer/master/bin/pyenv-installer | bash
-RUN echo "" >> ~/.bashrc
-RUN echo 'export PATH="/root/.pyenv/bin:$PATH"' >> ~/.bashrc
-RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-RUN echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
-RUN /bin/bash -c "source ~/.bashrc"
 
 # Install python dependencies using pyenv
-RUN /bin/bash -c "pyenv install 2.7.11 \
-    && pyenv global 2.7.11 \
-    && pip install --upgrade pip \
-    && pip install csvkit pandas numpy scipy sklearn nltk \
-        textmining wordcloud beautifulsoup4 pymongo inflect bson \
-    && export NLTK_DATA=/nltk_data \
-    && mkdir $NLTK_DATA \
-    && python -m nltk.downloader punkt stopwords"
+RUN pyenv install 2.7.11
+RUN pyenv global 2.7.11
+RUN pyenv rehash
+RUN pip install --upgrade pip
+RUN pip install csvkit nltk
+ENV NLTK_DATA /nltk_data
+RUN mkdir $NLTK_DATA
+RUN python -m nltk.downloader punkt stopwords
