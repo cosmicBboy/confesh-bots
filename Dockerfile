@@ -15,7 +15,7 @@ RUN echo "" >> ~/.bashrc
 RUN echo 'export PATH="/root/.pyenv/bin:$PATH"' >> ~/.bashrc
 RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 RUN echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
-RUN . ~/.bashrc
+RUN /bin/bash -c "source ~/.bashrc"
 
 # Install python dependencies using pyenv
 RUN pyenv install 2.7.11
