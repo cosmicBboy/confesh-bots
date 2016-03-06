@@ -18,11 +18,11 @@ RUN echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 RUN /bin/bash -c "source ~/.bashrc"
 
 # Install python dependencies using pyenv
-RUN pyenv install 2.7.11
-RUN pyenv global 2.7.11
-RUN pip install --upgrade pip
-RUN pip install csvkit pandas numpy scipy sklearn nltk textmining wordcloud \
-    beautifulsoup4 pymongo inflect bson
-RUN export NLTK_DATA=/nltk_data
-RUN mkdir $NLTK_DATA
-RUN python -m nltk.downloader punkt stopwords
+RUN /bin/bash -c "pyenv install 2.7.11 \
+    && pyenv global 2.7.11 \
+    && pip install --upgrade pip \
+    && pip install csvkit pandas numpy scipy sklearn nltk \
+        textmining wordcloud beautifulsoup4 pymongo inflect bson \
+    && export NLTK_DATA=/nltk_data \
+    && mkdir $NLTK_DATA \
+    && python -m nltk.downloader punkt stopwords"
