@@ -1,5 +1,7 @@
 csvkit
 pandas
+numpy
+scipy
 sklearn
 nltk
 # MySQL-python

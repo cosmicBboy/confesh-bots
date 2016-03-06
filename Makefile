@@ -69,7 +69,7 @@ setup-pipeline:
 	mkdir $(OUTPUT_FP)
 
 requirements:
-	pip2 install -r requirements.txt
+	pip install -r requirements.txt
 
 sql2csv:
 	for table in ${TABLES}; \

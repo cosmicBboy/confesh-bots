@@ -24,6 +24,10 @@ docker-build:
 	sudo apt-get update
 	sudo apt-get install apt-transport-https ca-certificates git tree docker.io
 
-python-build:
-	sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
-
+crontab-build:
+	echo 'SHELL=/bin/bash' | crontab
+	(crontab -l ; echo 'HOME=/') | crontab
+	(crontab -l ; echo 'PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin') | crontab
+	(crontab -l ; echo '') | crontab
+	(crontab -l ; echo "* * * * * cd /; echo 'hello world' >> ./crontest.txt") | crontab
+	(crontab -l ; echo '') | crontab
