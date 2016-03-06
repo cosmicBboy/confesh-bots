@@ -1,0 +1,18 @@
+{
+    "trim_rule": null, 
+    "hs": 1, 
+    "cbow_mean": 0, 
+    "negative": 0, 
+    "iter": 20, 
+    "sample": 0, 
+    "window": 5, 
+    "seed": 1, 
+    "sg": 0, 
+    "alpha": 0.025, 
+    "max_vocab_size": null, 
+    "min_count": 1, 
+    "size": 20, 
+    "min_alpha": 0.0001, 
+    "workers": 1, 
+    "null_word": 0
+}

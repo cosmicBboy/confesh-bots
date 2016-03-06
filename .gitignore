@@ -1,7 +1,6 @@
 *tmp
 *.ipynb_checkpoints
 topic_modelling/
-dream_api/models/*
 dream_auth_creds.py
 dream_auth_token.json
 mongo_creds.py
