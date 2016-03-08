@@ -31,3 +31,16 @@ crontab-build:
 	(crontab -l ; echo '') | crontab
 	(crontab -l ; echo "* * * * * cd /; echo 'hello world' >> ./crontest.txt") | crontab
 	(crontab -l ; echo '') | crontab
+
+cron-start:
+	@echo 'awakening dreambot...'
+	cron -L15
+	$(MAKE) cron-status
+
+cron-status:
+	ps aux | grep cron\ -L15
+
+cron-stop:
+	@ echo 'dreambot goes to sleep'
+	kill `pidof cron`
+	$(MAKE) cron-status
