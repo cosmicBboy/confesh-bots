@@ -19,7 +19,7 @@ EXTENSION = "htm"
 def scrape_dreams():
     for alpha in string.ascii_lowercase:
         print "Scraping dreams starting with letter: '{}'".format(alpha)
-        fp = "dream_api/raw/dreams_{}.html".format(alpha)
+        fp = "raw/dreams_{}.html".format(alpha)
         response = scrape_dream_char(alpha)
         print "Writing response to {}".format(fp)
         write_to_file(fp, response.text)

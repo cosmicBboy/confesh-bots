@@ -16,20 +16,19 @@ run-dream-bot:
 								  --id_log $(DREAM_LOG)
 
 setup-pipeline:
-	mkdir $(MODELS)
 	mkdir $(DATA_DIR)
 
 scrape-dreams:
-	python dream_api/scrape_dreams.py
+	python scrape_dreams.py
 
 parse-dreams:
-	python dream_api/parse_dreams.py -i dream_api/raw -o $(DATA_DIR)/dream_corpus.csv
+	python parse_dreams.py -i ./raw -o $(DATA_DIR)/dream_corpus.csv
 
 preprocess-dreams:
-	python dream_api/preprocess_dreams.py -i $(DATA_DIR)/dream_corpus.csv \
-										  -o $(DATA_DIR/dream_corpus_complete.csv
+	python preprocess_dreams.py -i $(DATA_DIR)/dream_corpus.csv \
+								-o $(DATA_DIR)/dream_corpus_complete.csv
 
-build-pipeline: scrape-dreams parse-dreams preprocess-dreams
+build-pipeline: parse-dreams preprocess-dreams
 
 clean-model:
 	rm $(MODEL_FP)$(VERSION)
