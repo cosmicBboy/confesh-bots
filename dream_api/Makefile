@@ -39,14 +39,14 @@ docker-build:
 	sudo apt-get install apt-transport-https ca-certificates git tree docker.io
 
 crontab-build:
-    echo 'SHELL=/bin/bash' | crontab
-    (crontab -l ; echo 'HOME=/') | crontab
-    (crontab -l ; echo 'PATH=$(PATH)') | crontab
-    (crontab -l ; echo 'MAILTO=""') | crontab
-    (crontab -l ; echo '') | crontab
-    (crontab -l ; echo "* * * * * cd /home/ubuntu/confesh-bot; make -C dream_api run-dream-bot VERSION=2.5 >> /home/ubuntu/dream_b\
+	echo 'SHELL=/bin/bash' | crontab
+	(crontab -l ; echo 'HOME=/') | crontab
+	(crontab -l ; echo 'PATH=$(PATH)') | crontab
+	(crontab -l ; echo 'MAILTO=""') | crontab
+	(crontab -l ; echo '') | crontab
+	(crontab -l ; echo "* * * * * cd /home/ubuntu/confesh-bot; make -C dream_api run-dream-bot VERSION=2.5 >> /home/ubuntu/dream_b\
 ot_log.txt") | crontab
-    (crontab -l ; echo '') | crontab
+	(crontab -l ; echo '') | crontab
 
 cron-start:
 	@echo 'awakening dreambot...'
