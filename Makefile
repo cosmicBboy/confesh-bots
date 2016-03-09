@@ -99,7 +99,7 @@ preprocess-comments:
 	done
 
 preprocess-reports:
-	$(eval $FNAMES := $(shell echo ${RAW_FILES} | grep -o '[A-z]*_reports\.csv')) \
+	$(eval $FNAMES := $(shell echo ${RAl_FILES} | grep -o '[A-z]*_reports\.csv')) \
 	for file in $($FNAMES); \
 	do \
 		python ingest/preprocess.py -i ${RAW}/$$file -o ${CLEAN}/$$file \
@@ -107,16 +107,6 @@ preprocess-reports:
 	done
 
 preprocess: preprocess-secrets preprocess-comments preprocess-reports
-
-scrape-dreams:
-	python dream_api/scrape_dreams.py
-
-parse-dreams:
-	python dream_api/parse_dreams.py -i dream_api/raw -o data/dream_corpus.csv
-
-preprocess-dreams:
-	python dream_api/preprocess_dreams.py -i data/dream_corpus.csv \
-										  -o data/dream_corpus_complete.csv
 
 clean:
 	rm -rf ${OUTPUT_FP}

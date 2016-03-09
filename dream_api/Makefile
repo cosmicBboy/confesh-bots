@@ -3,7 +3,8 @@ PHONY: all
 DBNAME=confesh-db
 COLLECTION=confession
 MODELS_DIR=./models
-DREAM_FP=../data/dream_corpus_complete.csv
+DATA_DIR=./data
+DREAM_FP=./data/dream_corpus_complete.csv
 MODEL_FP=./models/dream_bot_v
 DREAM_LOG=./dream_log.txt
 
@@ -16,6 +17,19 @@ run-dream-bot:
 
 setup-pipeline:
 	mkdir $(MODELS)
+	mkdir $(DATA_DIR)
+
+scrape-dreams:
+	python dream_api/scrape_dreams.py
+
+parse-dreams:
+	python dream_api/parse_dreams.py -i dream_api/raw -o $(DATA_DIR)/dream_corpus.csv
+
+preprocess-dreams:
+	python dream_api/preprocess_dreams.py -i $(DATA_DIR)/dream_corpus.csv \
+										  -o $(DATA_DIR/dream_corpus_complete.csv
+
+build-pipeline: scrape-dreams parse-dreams preprocess-dreams
 
 clean-model:
 	rm $(MODEL_FP)$(VERSION)
@@ -27,7 +41,7 @@ docker-build:
 crontab-build:
 	echo 'SHELL=/bin/bash' | crontab
 	(crontab -l ; echo 'HOME=/') | crontab
-	(crontab -l ; echo 'PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin') | crontab
+	(crontab -l ; echo 'PATH=$PATH') | crontab
 	(crontab -l ; echo '') | crontab
 	(crontab -l ; echo "* * * * * cd /; echo 'hello world' >> ./crontest.txt") | crontab
 	(crontab -l ; echo '') | crontab
