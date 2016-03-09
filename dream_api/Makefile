@@ -15,6 +15,9 @@ run-dream-bot:
 								  -dr $(DREAM_FP) \
 								  --id_log $(DREAM_LOG)
 
+requirements:
+	pip install -r ../requirements.txt
+
 mongo-creds:
 	echo "domain = <domain_creds>" > mongo_creds.py
 	echo "port = <port>" >> mongo_creds.py
@@ -25,7 +28,7 @@ dream-auth-creds:
 	echo "post_comment_url = <post_comment_url>" >> dream_auth_creds.py
 	echo "passphrase = <passphrase>" >> dream_auth_creds.py
 
-setup-pipeline:
+setup-pipeline: mongo-creds dream-auth-creds
 	mkdir $(DATA_DIR)
 
 scrape-dreams:
@@ -38,7 +41,7 @@ preprocess-dreams:
 	python preprocess_dreams.py -i $(DATA_DIR)/dream_corpus.csv \
 								-o $(DATA_DIR)/dream_corpus_complete.csv
 
-build-pipeline: parse-dreams preprocess-dreams
+build-pipeline: requirements setup-pipeline parse-dreams preprocess-dreams
 
 clean-model:
 	rm $(MODEL_FP)$(VERSION)
@@ -47,11 +50,14 @@ docker-build:
 	sudo apt-get update
 	sudo apt-get install apt-transport-https ca-certificates git tree docker.io
 
+cron-setup:
+	apt-get install postfix heirloom-mailx
+
 crontab-build:
 	echo 'SHELL=/bin/bash' | crontab
 	(crontab -l ; echo 'HOME=/') | crontab
 	(crontab -l ; echo 'PATH=$(PATH)') | crontab
-	(crontab -l ; echo 'MAILTO=""') | crontab
+	(crontab -l ; echo 'MAILTO="root"') | crontab
 	(crontab -l ; echo '') | crontab
 	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.5 >> /dream_b\
 ot_log.txt") | crontab
@@ -69,3 +75,6 @@ cron-stop:
 	@ echo 'dreambot goes to sleep'
 	kill `pidof cron`
 	$(MAKE) cron-status
+
+start: cron-setup crontab-build
+
