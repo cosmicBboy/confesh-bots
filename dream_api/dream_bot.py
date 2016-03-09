@@ -399,8 +399,12 @@ if __name__ == "__main__":
         # logic for interpretation and commenting
         if dream_passes_filter(post):
             print post['text']
-            interpretation = interpret_dream(post['text'], VOCAB)
-            print interpretation
-            post_comment(secret_id, auth_token, interpretation)
+            try:
+                interpretation = interpret_dream(post['text'], VOCAB)
+                print interpretation
+                post_comment(secret_id, auth_token, interpretation)
+            except Exception as e:
+                print e
+                pass
 
     print("Time taken for query: {}".format(time.time() - start))

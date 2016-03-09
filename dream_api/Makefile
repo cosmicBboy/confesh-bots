@@ -15,6 +15,16 @@ run-dream-bot:
 								  -dr $(DREAM_FP) \
 								  --id_log $(DREAM_LOG)
 
+mongo-creds:
+	echo "domain = <domain_creds>" > mongo_creds.py
+	echo "port = <port>" >> mongo_creds.py
+
+dream-auth-creds:
+	echo "auth_url = <auth_url>" > dream_auth_creds.py
+	echo "post_url = <post_url>" >> dream_auth_creds.py
+	echo "post_comment_url = <post_comment_url>" >> dream_auth_creds.py
+	echo "passphrase = <passphrase>" >> dream_auth_creds.py
+
 setup-pipeline:
 	mkdir $(DATA_DIR)
 
@@ -43,7 +53,7 @@ crontab-build:
 	(crontab -l ; echo 'PATH=$(PATH)') | crontab
 	(crontab -l ; echo 'MAILTO=""') | crontab
 	(crontab -l ; echo '') | crontab
-	(crontab -l ; echo "* * * * * cd /home/ubuntu/confesh-bot; make -C dream_api run-dream-bot VERSION=2.5 >> /home/ubuntu/dream_b\
+	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.5 >> /dream_b\
 ot_log.txt") | crontab
 	(crontab -l ; echo '') | crontab
 

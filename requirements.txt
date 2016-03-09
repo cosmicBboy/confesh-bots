@@ -11,3 +11,5 @@ beautifulsoup4
 pymongo
 inflect
 bson
+requests
+gensim
