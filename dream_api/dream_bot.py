@@ -173,16 +173,17 @@ def create_query_tokens(query, vocab):
 
     # add pluralized stemmed tokens
     plurals = [inflect_engine.plural(w) for w in stemmed_tokens]
-    return [t for t in set(query_tokens + stemmed_tokens + plurals)
-            if t in vocab]
+    tokens = set(query_tokens + stemmed_tokens + plurals)
+    return [t for t in tokens if t in vocab]
 
 
 def interpret_dream(query, vocab):
     query_tokens = create_query_tokens(query, vocab)
+    print query_tokens
     dream_subset_sents = match_query_to_dreams(query_tokens,
                                                dream_df, vocab)
     top_hits = prep_dream_definitions(dream_subset_sents)
-    return format_dream_interpretation(top_hits['interpretation'].tolist(),
+    return format_dream_interpretation(top_hits['interpretations'].tolist(),
                                        query_tokens)
 
 
@@ -191,26 +192,41 @@ def match_query_to_dreams(query_tokens, dream_df, vocab):
     # Matching logic:
     # -----------------
     # 1. Subset dream definitions by selecting only entries whose 'vocab' term
-    #    is in the query_tokens list
-    # 2. Tokenize the sentences in dream interpretations
-    dream_df = dream_df[dream_df['vocab']\
-        .apply(lambda x: True if x in query_tokens else False)]
-    dream_df.loc[:, 'sents'] = dream_df['interpretations']\
-        .apply(sent_word_tokenize)
+    #    is in the query_tokens list.
 
-    dream_match_index = [(row['vocab'], i, j, " ".join(s)) for i, row
-                         in dream_df.iterrows()
-                         for j, s in enumerate(row['sents'])]
+    dream_match = dream_df[dream_df['vocab']\
+        .apply(lambda x: True if x in query_tokens else False)].reset_index()
 
-    dream_match = pd.DataFrame(
-        dream_match_index,
-        columns=['vocab', 'index', 'sent_num', 'interpretation'])
-    dream_match.loc[:, 'sim'] = dream_match['interpretation'].apply(
-        lambda x: compute_similarity(x, query_tokens, vocab))
+    # Compute modifier tokens:
+    # modifier tokens are defined as tokens that are in the query tokens
+    # but are not in the list of vocab keywords.
+    vocab_tokens = dream_match['vocab'].unique().tolist()
+    plurals = [inflect_engine.plural(w) for w in vocab_tokens]
+    vocab_tokens = vocab_tokens + plurals
+    modifier_tokens = [t for t in query_tokens
+                       if t not in vocab_tokens]
+
+    dream_match = dream_match.groupby('vocab').apply(
+        lambda x: _match_modifier_tokens(x, modifier_tokens))
+    dream_match.loc[:, 'sim'] = dream_match['interpretations'].apply(
+        lambda x: _compute_similarity(x, query_tokens, vocab))
     return dream_match
 
+def _match_modifier_tokens(dream_group, modifier_tokens):
+    dream_group.loc[:, 'index'] = range(dream_group.shape[0])
+    dream_interp_tmp = dream_group[dream_group['index'] > 0]
 
-def compute_similarity(dream, query_tokens, vocab):
+    if len(modifier_tokens) == 0:
+        i = [0]
+    else:
+        modifier_re = '|'.join(modifier_tokens)
+        dream_interp_tmp = dream_interp_tmp[
+            dream_interp_tmp['interpretations'].str.contains(modifier_re)]
+        i = [0] + dream_interp_tmp['index'].tolist()
+    return dream_group.iloc[i]
+
+
+def _compute_similarity(dream, query_tokens, vocab):
     dream_tokens = [t1 for t1 in word_tokenize(dream) if t1 in vocab]
     if len(dream) == 0:
         return None
@@ -218,27 +234,39 @@ def compute_similarity(dream, query_tokens, vocab):
         return m.n_similarity(query_tokens, dream_tokens)
 
 
-def prep_dream_definitions(dream_match_df, top_n=5,
-                           sent_thres=1, sent_append_num=3):
-    top_dreams = dream_match_df[dream_match_df['sent_num'] < sent_thres]
-    print top_dreams
-    # TODO: group each row in the interpretation matches by vocab
+def prep_dream_definitions(dream_match_df):
+
+    # Group each row in the interpretation matches by vocab
     # - sorted by index
     # - select the first interpretation plus the top interpretation
     #   after the first interpretation.
     # - group vocab-level interpretations together and sort those groups
     #   by average similarity to the query.
-    top_dreams = top_dreams.sort_values('sim', ascending=False)
-    top_dreams = top_dreams.reset_index(drop=True)
-    top_index = [i for i in top_dreams.index if i in range(top_n)]
-    top_dreams = top_dreams.iloc[top_index]
-    top_dreams.loc[:, 'interpretation'] = top_dreams.apply(
-        lambda row: append_more_sentences(
-            row, dream_match_df, sent_append_num),
-        axis=1)
-    top_dreams.loc[:, 'interpretation'] = postprocess_dreams(
-        top_dreams['interpretation'].tolist())
+    dream_groups = dream_match_df.groupby('vocab')
+    ranked_interpretations = dream_groups.apply(rank_interpretation)
+    top_dreams = ranked_interpretations.reset_index(drop=True)
+    top_dreams.loc[:, 'interpretations'] = postprocess_dreams(
+        top_dreams['interpretations'].tolist())
     return top_dreams
+
+def rank_interpretation(dream_group, n=1):
+    '''Ranks interpretations within a dream entry
+
+    Input: dataframe of dream interpretations
+    Output: dataframe of top n dream interpretations ranked by sentence
+            similarity
+
+    Heuristic:
+    - Always include the first interpretation.
+    - Among the subsequent interpretations, rank by similarity score
+    - Select top n interpretations to include in the dream definition
+    '''
+    # print dream_group
+    dream_group['index'] = range(dream_group.shape[0])
+    dream_interp_tmp = dream_group[dream_group['index'] > 0]\
+        .sort_values('sim', ascending=False)
+    i = [0] + dream_interp_tmp['index'].iloc[:n].tolist()
+    return dream_group.iloc[i]
 
 
 def postprocess_dreams(dream_interp_list):
@@ -273,22 +301,10 @@ def format_dream_interpretation(dream_list, tokens):
     #foo #bar #baz
     '''
     interpretation = "\n\n".join(["{}".format(r) for r in dream_list])
+    cite_str = "http://www.dreammoods.com/"
     hashtags = " ".join(["#{}".format(t) for t in set(tokens)])
-    formatted_dream = "\n\n".join([interpretation, hashtags])
+    formatted_dream = "\n\n".join([interpretation, hashtags, cite_str])
     return "!dreambot! " + formatted_dream
-
-
-def append_more_sentences(top_dream_row, dream_df, sent_append_num):
-    index = top_dream_row['index']
-    i_start = top_dream_row['sent_num']
-    i_end = i_start + sent_append_num
-
-    # conditions
-    c1 = (dream_df['sent_num'] >= i_start)
-    c2 = (dream_df['sent_num'] < i_end)
-    c3 = (dream_df['index'] == index)
-    append_sents = dream_df[c1 & c2 &c3]['interpretation'].tolist()
-    return " ".join(append_sents)
 
 
 def write_to_dream_log(fp, secret_id):
@@ -394,11 +410,7 @@ if __name__ == "__main__":
     # get auth token to post comments to confesh
     auth_token = fetch_auth_token()
 
-    count = 0
     for post in dream_test_corpus:
-        if count > 10:
-            break
-        count += 1
         secret_id = str(post['_id'])
 
         # logic for logging
@@ -408,24 +420,15 @@ if __name__ == "__main__":
             print('Logging dream: {}'.format(secret_id))
             # write_to_dream_log(log_fp, secret_id)
 
-        print post['text']
-        try:
-            interpretation = interpret_dream(post['text'], VOCAB)
-            print interpretation
-            # post_comment(secret_id, auth_token, interpretation)
-        except Exception as e:
-            print e
-            pass
-
         # logic for interpretation and commenting
-        # if dream_passes_filter(post):
-        #     print post['text']
-        #     try:
-        #         interpretation = interpret_dream(post['text'], VOCAB)
-        #         print interpretation
-        #         # post_comment(secret_id, auth_token, interpretation)
-        #     except Exception as e:
-        #         print e
-        #         pass
+        if dream_passes_filter(post):
+            print post['text']
+            try:
+                interpretation = interpret_dream(post['text'], VOCAB)
+                print interpretation
+                post_comment(secret_id, auth_token, interpretation)
+            except Exception as e:
+                print e
+                pass
 
     print("Time taken for query: {}".format(time.time() - start))
