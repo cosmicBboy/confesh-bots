@@ -34,12 +34,20 @@ from argparse import ArgumentParser
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-STOP_PATTERNS =[
+STOP_PATTERNS = [
     'please see',
     'also',
     'dream moods\' interpretation for',
     'common dream themes:'
 ]
+INTERP_DELIM = [
+    'to',
+    'if',
+    'alternatively',
+    'in particular',
+    'that',
+]
+
 VOCAB_DELIMITER = ';'
 
 def parse_definition(definition):
@@ -76,6 +84,58 @@ def preprocess_dreams(dream_df):
     return dream_df
 
 
+def interp_aggregator(dream_group):
+    '''Aggregator function for dream corpus groups
+    '''
+    interps = dream_group['definitions'].apply(
+        parse_interpretations).tolist()[0]
+    redirect = [dream_group['redirect'].iloc[0] for _ in interps]
+    interp_df = pd.DataFrame({'interpretations': interps,
+                              'redirect': redirect})
+    return interp_df
+
+
+def parse_interpretations(dream_entry):
+    '''Parses a single dream entry into interpretations
+
+    Input: dream_entry (String)
+    Output: a pandas Series of dream interpretations (Series of Strings)
+    '''
+
+    # TODO: write a test that checks whether the empty dream interpretations
+    # are the same rows what look like "*please see <other entry>"
+
+    sents = sent_tokenize(dream_entry)
+    interp_index = [(i, s) for (i, s) in enumerate(sents)
+                    if contains_interp_delimiter(s)]
+    index = [i[0] for i in interp_index]
+    if len(index) <= 1:
+        # return original sentence if no interpretations are detected
+        # or if there is only one interpretation
+        return [dream_entry]
+
+    if index[0] != 0:
+        index = [0] + index
+    interp = format_interpretation(sents, zip(index[:-1], index[1:]))
+    return interp
+
+
+def contains_interp_delimiter(sentence):
+    '''Check if dream entry sentence contains interpretation delimiter
+    '''
+    delims = ["^{}".format(d) for d in INTERP_DELIM]
+    return any([re.search(p, sentence) for p in delims])
+
+
+def format_interpretation(sentences, indices):
+    '''Formats a list of dream sentences into interpretations
+
+    Uses indices to determine which sentences to group together
+    '''
+    return [" ".join(sentences[i[0]: i[1]]) for i in indices]
+
+
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-i', help='clean dreams filepath', type=str)
@@ -83,4 +143,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dream_df = pd.read_csv(args.i)
-    preprocess_dreams(dream_df).to_csv(args.o, index=False, encoding='utf-8')
+    dream_corpus = preprocess_dreams(dream_df)
+    dream_interp = dream_corpus.groupby(['vocab']).apply(interp_aggregator)
+    dream_interp.reset_index(level=0).to_csv(args.o, index=False, encoding='utf-8')
+    print dream_interp.head(50)

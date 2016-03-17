@@ -4,7 +4,7 @@ DBNAME=confesh-db
 COLLECTION=confession
 MODELS_DIR=./models
 DATA_DIR=./data
-DREAM_FP=./data/dream_corpus_complete.csv
+DREAM_FP=./data/dream_interpretations.csv
 MODEL_FP=./models/dream_bot_v
 DREAM_LOG=./dream_log.txt
 
@@ -39,7 +39,7 @@ parse-dreams:
 
 preprocess-dreams:
 	python preprocess_dreams.py -i $(DATA_DIR)/dream_corpus.csv \
-								-o $(DATA_DIR)/dream_corpus_complete.csv
+								-o $(DATA_DIR)/dream_interpretations.csv
 
 build-pipeline: requirements setup-pipeline parse-dreams preprocess-dreams
 
