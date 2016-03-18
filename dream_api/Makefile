@@ -13,7 +13,8 @@ run-dream-bot:
 								  -c $(COLLECTION) \
 								  -m $(MODEL_FP)$(VERSION) \
 								  -dr $(DREAM_FP) \
-								  --id_log $(DREAM_LOG)
+								  --id_log $(DREAM_LOG) \
+								  $(DRY)
 
 requirements:
 	pip install -r ../requirements.txt

@@ -166,6 +166,7 @@ def sent_word_tokenize(text):
 
 
 def create_query_tokens(query, vocab):
+    print query
     query_tokens = [w for w in scrub_text(query)]
 
     # add stemmed tokens
@@ -183,8 +184,9 @@ def interpret_dream(query, vocab):
     dream_subset_sents = match_query_to_dreams(query_tokens,
                                                dream_df, vocab)
     top_hits = prep_dream_definitions(dream_subset_sents)
-    return format_dream_interpretation(top_hits['interpretations'].tolist(),
-                                       query_tokens)
+    dream_tokens = top_hits['vocab'].tolist()
+    return _format_dream_interpretation(top_hits['interpretations'].tolist(),
+                                       dream_tokens)
 
 
 def match_query_to_dreams(query_tokens, dream_df, vocab):
@@ -234,7 +236,7 @@ def _compute_similarity(dream, query_tokens, vocab):
         return m.n_similarity(query_tokens, dream_tokens)
 
 
-def prep_dream_definitions(dream_match_df):
+def prep_dream_definitions(dream_match_df, top_n=5):
 
     # Group each row in the interpretation matches by vocab
     # - sorted by index
@@ -242,14 +244,19 @@ def prep_dream_definitions(dream_match_df):
     #   after the first interpretation.
     # - group vocab-level interpretations together and sort those groups
     #   by average similarity to the query.
+    # - select only the top_n interpretations
     dream_groups = dream_match_df.groupby('vocab')
-    ranked_interpretations = dream_groups.apply(rank_interpretation)
+    ranked_interpretations = dream_groups.apply(_rank_interpretation)
     top_dreams = ranked_interpretations.reset_index(drop=True)
-    top_dreams.loc[:, 'interpretations'] = postprocess_dreams(
+    top_dreams = top_dreams.groupby('vocab')\
+        .apply(_rank_definitions).reset_index(level=0)\
+        .sort_values('sim', ascending=False).iloc[:top_n]
+    print top_dreams
+    top_dreams.loc[:, 'interpretations'] = _postprocess_dreams(
         top_dreams['interpretations'].tolist())
     return top_dreams
 
-def rank_interpretation(dream_group, n=1):
+def _rank_interpretation(dream_group, n=1):
     '''Ranks interpretations within a dream entry
 
     Input: dataframe of dream interpretations
@@ -269,15 +276,23 @@ def rank_interpretation(dream_group, n=1):
     return dream_group.iloc[i]
 
 
-def postprocess_dreams(dream_interp_list):
+def _rank_definitions(interp_group, n=1):
+    '''Ranks dream definitions for a given set of interpretations
+    '''
+    dream_def = "\n\n".join(interp_group['interpretations'].tolist())
+    sim = interp_group['sim'].mean()
+    return pd.DataFrame({'sim': [sim], 'interpretations': [dream_def]})
+
+
+def _postprocess_dreams(dream_interp_list):
     d_list = [sent.split('.') for sent in dream_interp_list]
     d_list = [[s for s in sent if s != ""] for sent in d_list]
     d_list = map(
-        lambda sent_list: [format_dream_string(s) for s in sent_list], d_list)
+        lambda sent_list: [_format_dream_string(s) for s in sent_list], d_list)
     return [" ".join(d) for d in d_list]
 
 
-def format_dream_string(text):
+def _format_dream_string(text):
     text = text.strip()
     text = text.capitalize()
     text = "{}.".format(text)
@@ -285,7 +300,7 @@ def format_dream_string(text):
     return text
 
 
-def format_dream_interpretation(dream_list, tokens):
+def _format_dream_interpretation(dream_list, tokens):
     '''
     Create interpretation for production-ready format
     - Each interpretation has a paragraph
@@ -338,6 +353,8 @@ if __name__ == "__main__":
     parser.add_argument('-dr', help='dream corpus filepath')
     parser.add_argument('--id_log', help='filepath to log to posts that are' +
         'already implemented')
+    parser.add_argument('--dry', action='store_true',
+                        help='run dreambot without posting to confesh')
 
     args = parser.parse_args()
 
@@ -410,25 +427,31 @@ if __name__ == "__main__":
     # get auth token to post comments to confesh
     auth_token = fetch_auth_token()
 
+    count = 0
     for post in dream_test_corpus:
         secret_id = str(post['_id'])
 
         # logic for logging
-        if secret_id in dreams_already_interpreted:
+        if not args.dry and secret_id in dreams_already_interpreted:
             continue
-        else:
+        elif not args.dry:
             print('Logging dream: {}'.format(secret_id))
-            # write_to_dream_log(log_fp, secret_id)
+            write_to_dream_log(log_fp, secret_id)
 
         # logic for interpretation and commenting
-        if dream_passes_filter(post):
-            print post['text']
-            try:
-                interpretation = interpret_dream(post['text'], VOCAB)
-                print interpretation
-                post_comment(secret_id, auth_token, interpretation)
-            except Exception as e:
-                print e
-                pass
+        try:
+            if args.dry:
+                print interpret_dream(post['text'], VOCAB)
+            if args.dry and count >= 20:
+                break
+            elif not args.dry and dream_passes_filter(post):
+                interp = interpret_dream(post['text'], VOCAB)
+                print interp
+                post_comment(secret_id, auth_token, interp)
+        except Exception as e:
+            print e
+            pass
+
+        count += 1
 
     print("Time taken for query: {}".format(time.time() - start))
