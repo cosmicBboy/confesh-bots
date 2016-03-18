@@ -436,9 +436,6 @@ if __name__ == "__main__":
     for post in dream_test_corpus:
         secret_id = str(post['_id'])
 
-        if secret_id != '56eb830ae4b07260f818a2d5':
-            continue
-
         # logic for logging
         if not args.dry and secret_id in dreams_already_interpreted:
             continue
@@ -450,8 +447,8 @@ if __name__ == "__main__":
         try:
             if args.dry:
                 print interpret_dream(post['text'], VOCAB)
-            # if args.dry and count >= 20:
-            #     break
+            if args.dry and count >= 20:
+                break
             elif not args.dry and dream_passes_filter(post):
                 interp = interpret_dream(post['text'], VOCAB)
                 print interp
