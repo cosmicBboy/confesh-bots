@@ -21,14 +21,21 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 FORMAT_STRING = 'dreams_{}.html'
 TABLE_FORMAT = [u'html', u'td', u'tr', u'center', u'p', u'table', u'table']
 STOP_WORDS = ['TOP']
-EXCLUDE_VOCAB = ['to', 'tosee', 'please see']
+EXCLUDE_VOCAB = [
+    'to',
+    'tosee',
+    'please see',
+    'if',
+    'alternatively'
+    'in particular',
+    'that',
+    'todream'
+]
 
 def parse_all_dreams(input_fp):
     all_dreams_dict = OrderedDict()
     all_dreams_list = [parse_dream(alpha, input_fp)
                        for alpha in string.ascii_lowercase]
-    # all_dreams_list = [parse_dream(alpha, input_fp)
-    #                    for alpha in ['l']]
     for ddict in all_dreams_list:
         all_dreams_dict.update(ddict)
     df = pd.DataFrame({"vocab": all_dreams_dict.keys(),

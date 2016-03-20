@@ -85,6 +85,7 @@ from collections import Counter, OrderedDict
 from gensim.models import Word2Vec
 from pymongo import MongoClient
 from confesh_api import fetch_auth_token, post_comment
+from preprocess_dreams import VOCAB_DELIMITER as VOCAL_DELIMITER
 
 DATETIME_THRES = datetime(2015, 12, 31, 0, 00, 00, 000000)
 
@@ -109,7 +110,9 @@ remove_regex_in_query = [
     'dreams',
     'dreamt',
     'dream',
-    'dreaming'
+    'dreaming',
+    'lie',
+    'lying'
 ]
 
 mongo_comment_schema = OrderedDict({
@@ -135,9 +138,9 @@ def scrub_cursor(cursor, text_field='text'):
     return [scrub_text(c['text']) for c in cursor]
 
 
-def scrub_text(text, len_thres=2):
+def scrub_text(text, len_thres=1):
     '''
-    - find text field,
+    - find text field
     - lowercase
     - remove numbers
     - remove punctuation
@@ -200,13 +203,23 @@ def match_query_to_dreams(query_tokens, dream_df, vocab):
     # -----------------
     # 1. Subset dream definitions by selecting only entries whose 'vocab' term
     #    is in the query_tokens list.
+    # 2. If any of the matching entries contains a non-null value in the
+    #    redirect column, then parse the redirect string by ';' and use the
+    #    dream entries with the parsed redirect keywords
 
-    dream_match = dream_df[dream_df['vocab']\
-        .apply(lambda x: True if x in query_tokens else False)].reset_index()
+    dream_match = dream_df[dream_df['vocab']
+        .apply(lambda x: True if x in query_tokens else False)]
+    redirect_match = _match_redirect_entries(dream_match, dream_df)
+    dream_match = pd.concat([
+        dream_match[dream_match['redirect'].isnull()], redirect_match])
+    dream_match.reset_index(inplace=True)
+    print dream_match
 
     # Compute modifier tokens:
-    # modifier tokens are defined as tokens that are in the query tokens
-    # but are not in the list of vocab keywords.
+    # Modifier tokens are defined as tokens that are in the query tokens
+    # but are not in the list of vocab keywords. The purpose of this is to
+    # expand the keyword space to match for more vocab keywords in the dream
+    # corpus.
     vocab_tokens = dream_match['vocab'].unique().tolist()
     plurals = [inflect_engine.plural(w) for w in vocab_tokens]
     vocab_tokens = vocab_tokens + plurals
@@ -218,6 +231,15 @@ def match_query_to_dreams(query_tokens, dream_df, vocab):
     dream_match.loc[:, 'sim'] = dream_match['interpretations'].apply(
         lambda x: _compute_similarity(x, query_tokens, vocab))
     return dream_match
+
+
+def _match_redirect_entries(dream_match_df, dream_df,
+                            redirect_delim=VOCAL_DELIMITER):
+    redirect = dream_match_df[dream_match_df['redirect'].notnull()]['redirect']
+    redirect = redirect.apply(lambda x: x.split(redirect_delim))
+    redirect = [t.strip() for t in np.ravel(redirect.tolist())]
+    return dream_df[dream_df['vocab'].apply(lambda x: x in redirect)]
+
 
 def _match_modifier_tokens(dream_group, modifier_tokens):
     dream_group.loc[:, 'index'] = range(dream_group.shape[0])
@@ -241,7 +263,7 @@ def _compute_similarity(dream, query_tokens, vocab):
         return m.n_similarity(query_tokens, dream_tokens)
 
 
-def prep_dream_definitions(dream_match_df, top_n=5):
+def prep_dream_definitions(dream_match_df, top_n=10):
 
     # Group each row in the interpretation matches by vocab
     # - sorted by index
@@ -301,7 +323,8 @@ def _format_dream_string(text):
     text = text.strip()
     text = text.capitalize()
     text = "{}.".format(text)
-    text = re.compile(r'\ ([%s])' % re.escape(string.punctuation)).sub(r"\1", text)
+    text = re.compile(r'\ ([%s])' %
+                      re.escape(string.punctuation)).sub(r"\1", text)
     return text
 
 
@@ -321,7 +344,7 @@ def _format_dream_interpretation(dream_list, tokens):
     #foo #bar #baz
     '''
     interpretation = "\n\n".join(["{}".format(r) for r in dream_list])
-    cite_str = "http://www.dreammoods.com/"
+    cite_str = "Source: dreammoods.com"
     hashtags = " ".join(["#{}".format(t) for t in set(tokens)])
     formatted_dream = "\n\n".join([interpretation, hashtags, cite_str])
     return "!dreambot! " + formatted_dream
@@ -428,8 +451,6 @@ if __name__ == "__main__":
         dreams_already_interpreted = read_dream_log(log_fp)
     else:
         dreams_already_interpreted = []
-    print('Dreams already interpreted:')
-    print(dreams_already_interpreted)
 
     # get auth token to post comments to confesh
     auth_token = fetch_auth_token()

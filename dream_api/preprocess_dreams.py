@@ -50,10 +50,6 @@ INTERP_DELIM = [
 
 VOCAB_DELIMITER = ';'
 
-def parse_definition(definition):
-    sents = sent_tokenize(definition)
-    return sents
-
 
 def find_vocab(text, delim='or'):
     # heuristic for finding vocab words: split by '.' and use string
@@ -135,7 +131,6 @@ def format_interpretation(sentences, indices):
     return [" ".join(sentences[i[0]: i[1]]) for i in indices]
 
 
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-i', help='clean dreams filepath', type=str)
@@ -144,6 +139,7 @@ if __name__ == "__main__":
 
     dream_df = pd.read_csv(args.i)
     dream_corpus = preprocess_dreams(dream_df)
-    dream_interp = dream_corpus.groupby(['vocab']).apply(interp_aggregator)
-    dream_interp.reset_index(level=0).to_csv(args.o, index=False, encoding='utf-8')
+    dream_interp = dream_corpus.groupby(['vocab']).apply(interp_aggregator)\
+        .reset_index(level=0)
+    dream_interp.to_csv(args.o, index=False, encoding='utf-8')
     print dream_interp.head(50)
