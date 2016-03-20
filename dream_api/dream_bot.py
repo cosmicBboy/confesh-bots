@@ -360,6 +360,8 @@ if __name__ == "__main__":
         'already implemented')
     parser.add_argument('--dry', action='store_true',
                         help='run dreambot without posting to confesh')
+    parser.add_argument('--id', type=str, help='ingest specific secret id',
+                        default=None, nargs='?')
 
     args = parser.parse_args()
 
@@ -435,6 +437,10 @@ if __name__ == "__main__":
     count = 0
     for post in dream_test_corpus:
         secret_id = str(post['_id'])
+
+        # control flow for single id ingest
+        if args.id and secret_id != args.id:
+            continue
 
         # logic for logging
         if not args.dry and secret_id in dreams_already_interpreted:
