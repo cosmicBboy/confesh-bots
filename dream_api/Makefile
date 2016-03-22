@@ -11,6 +11,7 @@ DREAM_LOG=./dream_log.txt
 run-dream-bot:
 	python -W ignore dream_bot.py -db $(DBNAME) \
 								  -c $(COLLECTION) \
+								  -dom $(DOMAIN) \
 								  -m $(MODEL_FP)$(VERSION) \
 								  -dr $(DREAM_FP) \
 								  --id_log $(DREAM_LOG) \
@@ -61,7 +62,7 @@ crontab-build:
 	(crontab -l ; echo 'PATH=$(PATH)') | crontab
 	(crontab -l ; echo 'MAILTO="root"') | crontab
 	(crontab -l ; echo '') | crontab
-	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.6 >> /dream_b\
+	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.7 >> /dream_b\
 ot_log.txt") | crontab
 	(crontab -l ; echo '') | crontab
 

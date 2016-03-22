@@ -87,7 +87,8 @@ from pymongo import MongoClient
 from confesh_api import fetch_auth_token, post_comment
 from preprocess_dreams import VOCAB_DELIMITER as VOCAL_DELIMITER
 
-DATETIME_THRES = datetime(2015, 12, 31, 0, 00, 00, 000000)
+DATETIME_THRES = datetime(2016, 03, 19, 0, 00, 00, 000000)
+BOT_NAME = 'dreambot'
 
 ps = PorterStemmer()
 inflect_engine = inflect.engine()
@@ -365,11 +366,17 @@ def read_dream_log(fp):
 
 def dream_passes_filter(post_object, datetime_thres=DATETIME_THRES):
     if post_object['timestamp'] < DATETIME_THRES:
+        logging.info("Post {} doesn't pass datetime filter".format(
+            post_object['_id']))
         return False
-    elif any([c.get('avatar', None)
+    elif any([c.get('avatar', dict()).get('text', None) == BOT_NAME
          for c in post_object.get('comments', [dict()]) ]):
+        logging.info("Post {} doesn't pass dreambot filter".format(
+            post_object['_id']))
         return False
     else:
+        logging.info("Post {} pass dreambot filter".format(
+            post_object['_id']))
         return True
 
 if __name__ == "__main__":
@@ -377,6 +384,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='A CLI tool for DreamBot')
     parser.add_argument('-db', help='name of db')
     parser.add_argument('-c', help='collection name')
+    parser.add_argument('-dom', help='domain name')
     parser.add_argument('-m', help='model filepath')
     parser.add_argument('-dr', help='dream corpus filepath')
     parser.add_argument('--id_log', help='filepath to log to posts that are' +
@@ -391,10 +399,11 @@ if __name__ == "__main__":
     start = time.time()
     collection = fetch_collection(creds.domain, creds.port,
                                   args.db, args.c)
-    confesh_corpus = read_dream_corpus(collection, {'communities': 'dreams'},
-                                       projection={'text': 1, '_id': 0})
-    dream_test_corpus = generate_dream_collection_for_insert(
-        collection, {'communities': 'bots'})
+    query = {'communities': args.dom}
+    projection={'text': 1, '_id': 0}
+    confesh_corpus = read_dream_corpus(collection, query, projection)
+    dream_community_corpus = generate_dream_collection_for_insert(
+        collection, query)
 
     print("Time taken to read mongo: {}".format(time.time() - start))
 
@@ -424,6 +433,7 @@ if __name__ == "__main__":
     dream_df = pd.read_csv(d_fp)
     dream_corpus = [scrub_text(d) for d in dream_df['interpretations']]
 
+    # Preparing dreammoods + confesh dream corpus
     confesh_dream_corpus = dream_corpus + confesh_corpus
 
     # if file exists, load the file
@@ -453,10 +463,10 @@ if __name__ == "__main__":
         dreams_already_interpreted = []
 
     # get auth token to post comments to confesh
-    auth_token = fetch_auth_token()
+    auth_token = fetch_auth_token(args.dom)
 
     count = 0
-    for post in dream_test_corpus:
+    for post in dream_community_corpus:
         secret_id = str(post['_id'])
 
         # control flow for single id ingest
@@ -465,6 +475,7 @@ if __name__ == "__main__":
 
         # logic for logging
         if not args.dry and secret_id in dreams_already_interpreted:
+            logging.info('post {} already interpreted'.format(secret_id))
             continue
         elif not args.dry:
             print('Logging dream: {}'.format(secret_id))
@@ -479,7 +490,7 @@ if __name__ == "__main__":
             elif not args.dry and dream_passes_filter(post):
                 interp = interpret_dream(post['text'], VOCAB)
                 print interp
-                post_comment(secret_id, auth_token, interp)
+                post_comment(args.dom, secret_id, auth_token, interp)
         except Exception as e:
             print e
             pass

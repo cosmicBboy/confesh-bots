@@ -4,7 +4,7 @@ import urllib, urllib2
 import requests
 
 
-def fetch_auth_token():
+def fetch_auth_token(community_name):
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -13,11 +13,12 @@ def fetch_auth_token():
         "action": "auth",
         "email": creds.passphrase
     }
-    r = requests.post(creds.auth_url, headers=headers, data=json.dumps(payload))
+    r = requests.post(creds.auth_url.format(community_name),
+                      headers=headers, data=json.dumps(payload))
     return json.loads(r.content)['token']
 
 
-def post_comment(secret_id, auth_token, text):
+def post_comment(community_name, secret_id, auth_token, text):
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -30,7 +31,7 @@ def post_comment(secret_id, auth_token, text):
         }
     }
     print "Payload:\n{}".format(payload)
-    r = requests.post(creds.post_comment_url,
+    r = requests.post(creds.post_comment_url.format(community_name),
                       headers=headers, data=json.dumps(payload))
 
 

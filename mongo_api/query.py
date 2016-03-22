@@ -29,10 +29,44 @@ def text_stream_cursor(cursor, field_list, n=5):
                if k in field_list}
 
 if __name__ == "__main__":
+    from datetime import datetime
+    DATETIME_THRES = datetime(2016, 3, 20, 0, 00, 00, 000000)
     # Example queries:
     # query = {'communities': 'bots'}
+    # query = {'_id': ObjectId('56ef6601e4b07260f818b904')}
 
-    query = {'_id': ObjectId('56b9565ae4b01c56828d8584')}
-    confesh_stream = create_confesh_stream('confesh-db', 'confession', query)
+    query = {'communities': 'dreams', '_id': ObjectId('56efe063e4b07260f818b987')}
+    confesh_stream = create_confesh_stream('confesh-db', 'confession', query,
+                                            n=None)
+
+    ## This removes comments that meet the conditional filters
+    dreambot_comment_ids = []
     for result in confesh_stream:
         print result
+        comments = result.get('comments', None)
+        if comments:
+            # if there are comments in the post, then collect dream._ids
+            dreambot_comments = [c for c in comments if
+                                 c.get('avatar', None)]
+            ids = [c['_id'] for c in dreambot_comments if
+                   c.get('avatar')['text'] == 'dreambot' and
+                   c.get('timestamp') > DATETIME_THRES]
+            dreambot_comment_ids.extend(ids)
+
+    # TODO: Functionalize this section
+    coll_obj = fetch_collection('confesh-db', 'confession')
+    coll_obj.update_one({'_id': ObjectId('56efe063e4b07260f818b987')},
+                        {'$pull': {'comments': {'_id': {"$in": dreambot_comment_ids}}}})
+
+    ## Now need to update number of comments field based on length of comments array
+    coll_obj = fetch_collection('confesh-db', 'confession')
+    for result in coll_obj.find(query):
+        secret_id = str(result['_id'])
+        comments =  result.get('comments', None)
+        if comments:
+            len_comments = len(comments)
+            coll_obj.update_one(
+                {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': len_comments}})
+        else:
+            coll_obj.update_one(
+                {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': 0}})
