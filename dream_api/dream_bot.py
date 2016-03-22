@@ -87,7 +87,7 @@ from pymongo import MongoClient
 from confesh_api import fetch_auth_token, post_comment
 from preprocess_dreams import VOCAB_DELIMITER as VOCAL_DELIMITER
 
-DATETIME_THRES = datetime(2016, 03, 19, 0, 00, 00, 000000)
+DATETIME_THRES = datetime(2016, 03, 15, 0, 00, 00, 000000)
 BOT_NAME = 'dreambot'
 
 ps = PorterStemmer()
