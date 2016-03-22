@@ -238,7 +238,7 @@ def _match_redirect_entries(dream_match_df, dream_df,
                             redirect_delim=VOCAL_DELIMITER):
     redirect = dream_match_df[dream_match_df['redirect'].notnull()]['redirect']
     redirect = redirect.apply(lambda x: x.split(redirect_delim))
-    redirect = [t.strip() for t in np.ravel(redirect.tolist())]
+    redirect = [t.strip() for tokens in redirect.tolist() for t in tokens]
     return dream_df[dream_df['vocab'].apply(lambda x: x in redirect)]
 
 
