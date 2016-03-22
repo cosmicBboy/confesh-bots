@@ -62,7 +62,7 @@ crontab-build:
 	(crontab -l ; echo 'PATH=$(PATH)') | crontab
 	(crontab -l ; echo 'MAILTO="root"') | crontab
 	(crontab -l ; echo '') | crontab
-	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.7 >> /dream_b\
+	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.7 DOMAIN=dreams >> /dream_b\
 ot_log.txt") | crontab
 	(crontab -l ; echo '') | crontab
 
