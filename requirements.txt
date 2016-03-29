@@ -13,3 +13,5 @@ inflect
 bson
 requests
 gensim
+plotly
+cufflinks
