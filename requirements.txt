@@ -10,8 +10,9 @@ wordcloud
 beautifulsoup4
 pymongo
 inflect
-bson
-requests
 gensim
 plotly
 cufflinks
+feather-format
+funcy
+smart-open
