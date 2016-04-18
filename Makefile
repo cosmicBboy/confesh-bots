@@ -108,5 +108,9 @@ preprocess-reports:
 
 preprocess: preprocess-secrets preprocess-comments preprocess-reports
 
+.PHONY: tests
+tests:
+	nosetests --rednose --verbose --nocapture
+
 clean:
 	rm -rf ${OUTPUT_FP}

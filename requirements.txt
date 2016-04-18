@@ -16,3 +16,7 @@ cufflinks
 feather-format
 funcy
 smart-open
+bitly_api
+moc
+nose
+rednose

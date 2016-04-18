@@ -4,6 +4,7 @@ topic_modelling/
 dream_auth_creds.py
 dream_auth_token.json
 mongo_creds.py
+bitly_creds.py
 dream_log.txt
 
 # Data
