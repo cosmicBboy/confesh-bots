@@ -11,7 +11,7 @@ def shorten_secret_url(secret_id):
     payload = _create_request_payload(long_url)
     response = r.get(endpoint, params=payload)
     response = _response_to_dict(r.get(endpoint, params=payload))
-    return response
+    return _format_bitly_response(response)
 
 
 def _response_to_dict(response):

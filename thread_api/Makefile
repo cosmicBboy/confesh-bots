@@ -2,6 +2,7 @@
 
 clean:
 	rm ./*.pyc
+	rm ./tmp/*.csv
 
 mongo-creds:
 	echo "domain = <domain_creds>" > mongo_creds.py

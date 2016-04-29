@@ -20,3 +20,4 @@ bitly_api
 moc
 nose
 rednose
+boto

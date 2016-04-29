@@ -24,12 +24,13 @@ from gensim.models import Word2Vec
 from gensim import similarities
 from stream_mongo import MongoStreamer
 from preprocessor import TextPreprocessor
-from s3_utils import create_model_key
+from s3_utils import create_model_key, BitlyS3Cacher
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO, stream=sys.stdout)
 
 tp = TextPreprocessor()
+bitly_cacher = BitlyS3Cacher()
 
 THREAD_BOT_MSG = "You bumped this post! Here are more like this one"
 THREAD_BOT_CODE = '!threadbot!'
@@ -66,7 +67,6 @@ def _agg_target_doc_group_row(target_doc_group_row):
     '''Adds url link to a single recommendation document
     '''
     query_text = target_doc_group_row['query_match']
-    # short_url = 'https://bit.ly/fakethreadbot'
     short_url = _fetch_short_url(target_doc_group_row['q_doc_id'])
     rec_strings = _format_recommendation(query_text, short_url)
     return rec_strings
@@ -84,12 +84,14 @@ def _format_recommendation(query_match_text, short_url, max_text_len=100):
 
 
 def _fetch_short_url(secret_id):
-    # returning this fake bitly url is a bandaid over the bitly rate limits
-    # TODO: refactor such that bitly api call results are cached with secret_id
-    # bitly hash
-    return "fake_bitly_url"
+    '''Fetches the short_url of the specified secret_id
+
+    Uses BitlyS3Cacher to fetch bitly data from s3 if it's cached. Otherwise,
+    the cacher sends a GET request to bitly to grab the data and caches it
+    for future use.
+    '''
     try:
-        return shorten_secret_url(secret_id)['url']
+        return bitly_cacher.fetch_bitly_data(secret_id)['url']
         sleep(1)
     except:
         logging.warning("HEY THERE'S AN ERROR HERE")

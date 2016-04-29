@@ -65,15 +65,14 @@ if __name__ == "__main__":
     w2v_rec = Word2VecRecommender('model1')
 
     # # PROCESS RECOMMENDATIONS
-    recommend_file = './tmp/recommendations4.csv'
+    recommend_file = './tmp/recommendations.csv'
     if os.path.isfile(recommend_file):
         sim = pd.read_csv(recommend_file, index_col=False)
     else:
         sim = w2v_rec.compute_sim_matrix(recommend_docs, query_docs)
         sim.to_csv(recommend_file)
 
-    processed_rec_fp = './tmp/processed_recommendations4.csv'
-    processed_recs = preprocess_recommendations(sim)
+    processed_rec_fp = './tmp/processed_recommendations.csv'
 
     if os.path.isfile(processed_rec_fp):
         processed_recs = pd.read_csv(processed_rec_fp, index_col=False)
