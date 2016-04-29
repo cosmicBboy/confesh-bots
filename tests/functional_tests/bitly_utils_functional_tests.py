@@ -13,4 +13,4 @@ class TestBitlyUtils:
         secret_id = '5713db57e4b07260f8197fb9'
         response = bitly_utils.shorten_secret_url(secret_id)
         assert_equals(response['status_code'], 200)
-        assert_equals(response['data']['new_hash'], 0)
+        assert_equals(response['new_hash'], 0)

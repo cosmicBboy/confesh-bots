@@ -97,8 +97,9 @@ class TestBitlyUtils:
 
     @patch('thread_api.bitly_utils._format_confesh_secret_long_url')
     @patch('thread_api.bitly_utils._response_to_dict')
+    @patch('thread_api.bitly_utils._format_bitly_response')
     def test_shorten_secret_url_calls_format_confesh_secret_long_url(
-            self, response_dict_mock, long_url_mock):
+            self, bitly_response_mock, response_dict_mock, long_url_mock):
         '''shorten_secret_url should call _format_confesh_secret_long_url
         '''
         response_dict_mock.side_effect = fake_response_to_dict
@@ -109,8 +110,9 @@ class TestBitlyUtils:
 
     @patch('thread_api.bitly_utils._format_bitly_endpoint')
     @patch('thread_api.bitly_utils._response_to_dict')
+    @patch('thread_api.bitly_utils._format_bitly_response')
     def test_shorten_secret_url_calls_format_bitly_endpoint(
-            self, response_dict_mock, bitly_mock):
+            self, bitly_response_mock, response_dict_mock, bitly_mock):
         '''shorten_secret_url should call _format_bitly_endpoint
         '''
         response_dict_mock.side_effect = fake_response_to_dict
@@ -121,8 +123,9 @@ class TestBitlyUtils:
 
     @patch('thread_api.bitly_utils._create_request_payload')
     @patch('thread_api.bitly_utils._response_to_dict')
+    @patch('thread_api.bitly_utils._format_bitly_response')
     def test_shorten_secret_url_calls_create_request_payload(
-            self, response_dict_mock, payload_mock):
+            self, bitly_response_mock, response_dict_mock, payload_mock):
         '''shorten_secret_url should call _create_request_payload
         '''
         response_dict_mock.side_effect = fake_response_to_dict
