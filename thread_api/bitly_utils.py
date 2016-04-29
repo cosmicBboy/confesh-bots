@@ -1,5 +1,6 @@
 import requests as r
 import json
+from time import sleep
 from collections import OrderedDict
 from bitly_creds import access_token
 

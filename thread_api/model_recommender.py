@@ -16,6 +16,8 @@ import mongo_creds as creds
 import json
 import sys
 import smart_open as so
+from time import sleep
+from bitly_utils import shorten_secret_url
 from collections import OrderedDict
 from argparse import ArgumentParser
 from gensim.models import Word2Vec
@@ -28,6 +30,72 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO, stream=sys.stdout)
 
 tp = TextPreprocessor()
+
+THREAD_BOT_MSG = "You bumped this post! Here are more like this one"
+THREAD_BOT_CODE = '!threadbot!'
+
+
+def preprocess_recommendations(rec_df):
+    '''Prepares similarity recommendation dataframe for Confesh API POST call
+    '''
+    target_doc_groups = rec_df.groupby('recommend_doc')
+    preprocessed_recs = target_doc_groups.apply(_agg_target_doc_group)\
+        .reset_index(level=0)\
+        .rename(columns={0: 'recommendations'})
+
+    return preprocessed_recs.reset_index(level=0)
+
+
+def _agg_target_doc_group(target_doc_group):
+    '''Aggregates and formats a group of recommendations for a target document
+    '''
+    df = target_doc_group[['query_match', 'q_doc_id']]
+    formatted_df = df.apply(_agg_target_doc_group_row, axis=1)
+    return _format_message(formatted_df)
+
+
+def _format_message(formatted_rec_list):
+    '''Helper function to format a group of recommendations for a target document
+    '''
+    formatted_rec_string = '\n\n'.join(formatted_rec_list)
+    return "{} {}\n\n{}".format(
+        THREAD_BOT_CODE, THREAD_BOT_MSG, formatted_rec_string)
+
+
+def _agg_target_doc_group_row(target_doc_group_row):
+    '''Adds url link to a single recommendation document
+    '''
+    query_text = target_doc_group_row['query_match']
+    # short_url = 'https://bit.ly/fakethreadbot'
+    short_url = _fetch_short_url(target_doc_group_row['q_doc_id'])
+    rec_strings = _format_recommendation(query_text, short_url)
+    return rec_strings
+
+
+def _format_recommendation(query_match_text, short_url, max_text_len=100):
+    '''Helper function to format the recommendation document string
+    '''
+    if len(query_match_text) > max_text_len:
+        query_match_text = query_match_text[:max_text_len]
+    if len(query_match_text) >= 3 and query_match_text[-3:] != '...':
+        query_match_text = query_match_text + '...'
+    return "{}<a href=\"{}\" target=\"_blank\"> read more</a>".format(
+        query_match_text, short_url)
+
+
+def _fetch_short_url(secret_id):
+    # returning this fake bitly url is a bandaid over the bitly rate limits
+    # TODO: refactor such that bitly api call results are cached with secret_id
+    # bitly hash
+    return "fake_bitly_url"
+    try:
+        return shorten_secret_url(secret_id)['url']
+        sleep(1)
+    except:
+        logging.warning("HEY THERE'S AN ERROR HERE")
+        logging.warning("secret_id: {}".format(secret_id))
+        pass
+
 
 class Word2VecRecommender(object):
 
