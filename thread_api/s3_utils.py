@@ -9,6 +9,7 @@ import sys
 import json
 import os
 import boto
+from time import sleep
 from boto.s3.key import Key
 from bitly_utils import shorten_secret_url
 
@@ -58,6 +59,7 @@ class BitlyS3Cacher(object):
             logging.info("{} doesn't exist, sending bitly GET request"
                          .format(self.key))
             response = shorten_secret_url(secret_id)
+            sleep(1)
             self._cache_bitly_as_json(response)
             return response
 

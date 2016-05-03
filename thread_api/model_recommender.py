@@ -16,7 +16,6 @@ import mongo_creds as creds
 import json
 import sys
 import smart_open as so
-from time import sleep
 from bitly_utils import shorten_secret_url
 from collections import OrderedDict
 from argparse import ArgumentParser
@@ -39,7 +38,7 @@ THREAD_BOT_CODE = '!threadbot!'
 def preprocess_recommendations(rec_df):
     '''Prepares similarity recommendation dataframe for Confesh API POST call
     '''
-    target_doc_groups = rec_df.groupby('recommend_doc')
+    target_doc_groups = rec_df.groupby(['recommend_doc', 'r_doc_id'])
     preprocessed_recs = target_doc_groups.apply(_agg_target_doc_group)\
         .reset_index(level=0)\
         .rename(columns={0: 'recommendations'})
@@ -92,7 +91,6 @@ def _fetch_short_url(secret_id):
     '''
     try:
         return bitly_cacher.fetch_bitly_data(secret_id)['url']
-        sleep(1)
     except:
         logging.warning("HEY THERE'S AN ERROR HERE")
         logging.warning("secret_id: {}".format(secret_id))

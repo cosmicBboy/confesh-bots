@@ -40,4 +40,4 @@ if __name__ == "__main__":
     community = 'bots'
     auth_token = fetch_auth_token(community)
     secret_id = '56b9565ae4b01c56828d8584'
-    post_comment(community, secret_id, auth_token, 'Testing HTTP Post Now')
+    post_comment(community, secret_id, auth_token, 'Testing HTTP Post Now!')

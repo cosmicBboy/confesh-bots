@@ -87,7 +87,7 @@ class MongoStreamer(object):
                 doc_type, )
             raise ValueError(msg)
 
-        result = {'id': secret_obj['_id'],
+        result = {'id': str(secret_obj['_id']),
                   'text': _encode_utf(secret_obj['text']),
                   'bumped': secret_obj.get('bumped', False),
                   'doc_type': doc_type}
