@@ -77,6 +77,7 @@ def _format_recommendation(query_match_text, short_url, max_text_len=100):
     '''
     if len(query_match_text) > max_text_len:
         query_match_text = query_match_text[:max_text_len]
+        query_match_text = " ".join(query_match_text.split()[:-1])
     if len(query_match_text) >= 3 and query_match_text[-3:] != '...':
         query_match_text = query_match_text + '...'
     return "{}<a href=\"{}\" target=\"_blank\"> read more</a>".format(
