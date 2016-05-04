@@ -16,7 +16,7 @@ from bitly_utils import shorten_secret_url
 S3 = 's3://'
 BUCKET = 'bot-services'
 BOT_KEY = 'threadbot'
-BITLY_KEY = 'bitly-cache'
+BITLY_BUCKET = 'bitly-cache'
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO, stream=sys.stdout)
@@ -31,6 +31,14 @@ def create_model_key(model_name, metadata_key_name, metadata_ext):
     return path + '.{}'.format(metadata_ext)
 
 
+def model_exists(model_name, metadata_key_name='model', metadata_ext='w2v'):
+    bucket = boto.connect_s3().get_bucket(BUCKET)
+    key_string = "{}/{}/{}.{}".format(
+        BOT_KEY, model_name, metadata_key_name, metadata_ext)
+    key = Key(bucket, key_string)
+    return key.exists()
+
+
 class BitlyS3Cacher(object):
     '''A class for handling bitly HTTP get response caching
 
@@ -42,9 +50,9 @@ class BitlyS3Cacher(object):
     '''
 
     def __init__(self):
-        self.bucket = boto.connect_s3().get_bucket(BITLY_KEY)
+        self.bucket = boto.connect_s3().get_bucket(BITLY_BUCKET)
 
-    def fetch_bitly_data(self, secret_id):
+    def fetch_bitly_data(self, secret_id, community):
         '''If s3 key exists, returns a dictionary, otherwise send HTTP get request
 
         The response of the HTTP get request is then cached with the
@@ -58,7 +66,7 @@ class BitlyS3Cacher(object):
         else:
             logging.info("{} doesn't exist, sending bitly GET request"
                          .format(self.key))
-            response = shorten_secret_url(secret_id)
+            response = shorten_secret_url(secret_id, community)
             sleep(1)
             self._cache_bitly_as_json(response)
             return response

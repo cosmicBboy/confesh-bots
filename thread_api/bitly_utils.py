@@ -5,8 +5,8 @@ from collections import OrderedDict
 from bitly_creds import access_token
 
 
-def shorten_secret_url(secret_id):
-    long_url = _format_confesh_secret_long_url(secret_id)
+def shorten_secret_url(secret_id, community):
+    long_url = _format_confesh_secret_long_url(secret_id, community)
     endpoint = _format_bitly_endpoint('v3/shorten')
     payload = _create_request_payload(long_url)
     response = r.get(endpoint, params=payload)
@@ -33,8 +33,8 @@ def _format_bitly_endpoint(api_endpoint):
     return '%s/%s' % (target_uri, api_endpoint)
 
 
-def _format_confesh_secret_long_url(secret_id):
-    confesh_url = 'http://www.confesh.com'
+def _format_confesh_secret_long_url(secret_id, community):
+    confesh_url = 'http://{}.confesh.com'.format(community)
     confesh_path = '#/confessions/latest-activity/confession'
     return '%s/%s/%s' % (confesh_url, confesh_path, secret_id)
 

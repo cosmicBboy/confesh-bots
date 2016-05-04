@@ -16,7 +16,6 @@ import mongo_creds as creds
 import json
 import sys
 import smart_open as so
-from bitly_utils import shorten_secret_url
 from collections import OrderedDict
 from argparse import ArgumentParser
 from gensim.models import Word2Vec
@@ -35,22 +34,24 @@ THREAD_BOT_MSG = "You bumped this post! Here are more like this one"
 THREAD_BOT_CODE = '!threadbot!'
 
 
-def preprocess_recommendations(rec_df):
+def preprocess_recommendations(rec_df, community):
     '''Prepares similarity recommendation dataframe for Confesh API POST call
     '''
     target_doc_groups = rec_df.groupby(['recommend_doc', 'r_doc_id'])
-    preprocessed_recs = target_doc_groups.apply(_agg_target_doc_group)\
+    preprocessed_recs = target_doc_groups\
+        .apply(_agg_target_doc_group, community)\
         .reset_index(level=0)\
         .rename(columns={0: 'recommendations'})
 
     return preprocessed_recs.reset_index(level=0)
 
 
-def _agg_target_doc_group(target_doc_group):
+def _agg_target_doc_group(target_doc_group, community):
     '''Aggregates and formats a group of recommendations for a target document
     '''
     df = target_doc_group[['query_match', 'q_doc_id']]
-    formatted_df = df.apply(_agg_target_doc_group_row, axis=1)
+    formatted_df = df.apply(_agg_target_doc_group_row, axis=1,
+                            args=[community])
     return _format_message(formatted_df)
 
 
@@ -62,11 +63,11 @@ def _format_message(formatted_rec_list):
         THREAD_BOT_CODE, THREAD_BOT_MSG, formatted_rec_string)
 
 
-def _agg_target_doc_group_row(target_doc_group_row):
+def _agg_target_doc_group_row(target_doc_group_row, community):
     '''Adds url link to a single recommendation document
     '''
     query_text = target_doc_group_row['query_match']
-    short_url = _fetch_short_url(target_doc_group_row['q_doc_id'])
+    short_url = _fetch_short_url(target_doc_group_row['q_doc_id'], community)
     rec_strings = _format_recommendation(query_text, short_url)
     return rec_strings
 
@@ -82,7 +83,7 @@ def _format_recommendation(query_match_text, short_url, max_text_len=100):
         query_match_text, short_url)
 
 
-def _fetch_short_url(secret_id):
+def _fetch_short_url(secret_id, community):
     '''Fetches the short_url of the specified secret_id
 
     Uses BitlyS3Cacher to fetch bitly data from s3 if it's cached. Otherwise,
@@ -90,7 +91,7 @@ def _fetch_short_url(secret_id):
     for future use.
     '''
     try:
-        return bitly_cacher.fetch_bitly_data(secret_id)['url']
+        return bitly_cacher.fetch_bitly_data(secret_id, community)['url']
     except:
         logging.warning("HEY THERE'S AN ERROR HERE")
         logging.warning("secret_id: {}".format(secret_id))
