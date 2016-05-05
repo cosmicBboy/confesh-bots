@@ -54,7 +54,7 @@ if __name__ == "__main__":
         with open(auth_token_fp, 'rb') as fp:
             auth_token = fp.read()
     else:
-        auth_token = fetch_auth_token(community)
+        auth_token = fetch_auth_token(args.train_community)
         with open(auth_token_fp, 'wb') as fp:
             fp.write(auth_token)
 

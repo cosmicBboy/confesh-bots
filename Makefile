@@ -69,6 +69,7 @@ setup-pipeline:
 	mkdir $(OUTPUT_FP)
 
 requirements:
+	pip install cython
 	pip install -r requirements.txt
 
 sql2csv:
