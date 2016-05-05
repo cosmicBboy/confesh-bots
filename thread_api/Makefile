@@ -43,7 +43,7 @@ thread-creds:
 	echo "post_comment_url = '<post_comment_url>'" >> threadbot_creds.py
 	echo "passphrase = '<password>'" >> threadbot_creds.py
 
-setup-pipeline: mongo-creds dream-auth-creds
+setup-pipeline: mongo-creds thread-creds
 	mkdir $(DATA_DIR)
 
 run-thread-bot:
