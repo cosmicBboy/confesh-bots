@@ -27,14 +27,16 @@ DATETIME_THRES = datetime(2016, 03, 15, 0, 00, 00, 000000)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Preprocessing Layer for Confesh Bots')
-    parser.add_argument('-db', help='database name', default='confesh-db')
-    parser.add_argument('-cl', help='collection name', default='confession')
-    parser.add_argument('-m', help='model name', default='model3')
-    parser.add_argument('--train_community', default='www',
+    parser.add_argument('-db', help='database name')
+    parser.add_argument('-cl', help='collection name')
+    parser.add_argument('-m', help='model name')
+    parser.add_argument('--rec_fp', help='recommendations fp')
+    parser.add_argument('--p_rec_fp', help='processed recommendations fp')
+    parser.add_argument('--train_community',
                         help='community name of train dataset to train model')
-    parser.add_argument('--target_community', default='bots',
+    parser.add_argument('--target_community',
                         help='community name of the target community')
-    parser.add_argument('--query_community', default='www',
+    parser.add_argument('--query_community',
                         help='community name of query community')
 
     args = parser.parse_args()
@@ -106,13 +108,11 @@ if __name__ == "__main__":
     w2v_rec = Word2VecRecommender(model_name)
 
     # PROCESS RECOMMENDATIONS
-    recommend_file = './tmp/recommendations.csv'
     sim = w2v_rec.compute_sim_matrix(target_docs, query_docs)
-    sim.to_csv(recommend_file)
+    sim.to_csv(args.rec_fp)
 
-    processed_rec_fp = './tmp/processed_recommendations.csv'
     processed_recs = preprocess_recommendations(sim, query_cm)
-    processed_recs.to_csv(processed_rec_fp, index=False)
+    processed_recs.to_csv(args.p_rec_fp, index=False)
 
     for _, r in processed_recs.iterrows():
         secret_id = r['r_doc_id']

@@ -17,6 +17,7 @@ S3 = 's3://'
 BUCKET = 'bot-services'
 BOT_KEY = 'threadbot'
 BITLY_BUCKET = 'bitly-cache'
+SLEEP = 3
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO, stream=sys.stdout)
@@ -67,7 +68,7 @@ class BitlyS3Cacher(object):
             logging.info("{} doesn't exist, sending bitly GET request"
                          .format(self.key))
             response = shorten_secret_url(secret_id, community)
-            sleep(1)
+            sleep(SLEEP)
             self._cache_bitly_as_json(response)
             return response
 
