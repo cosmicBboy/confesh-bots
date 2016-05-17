@@ -16,7 +16,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from itertools import chain
 
-TBOT = 'threadbot'
+TBOT = 'HelpfulDrake'
 
 
 def _encode_utf(text):
