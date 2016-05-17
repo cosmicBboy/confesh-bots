@@ -30,8 +30,9 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 tp = TextPreprocessor()
 bitly_cacher = BitlyS3Cacher()
 
-THREAD_BOT_MSG = "You bumped this post! Here are more like this one"
-THREAD_BOT_CODE = '!threadbot!'
+THREAD_BOT_MSG = "When I see that post get bumped, just gotta recommend some "\
+                 "shit. Looong tap on mobile."
+THREAD_BOT_CODE = '!drake'
 
 
 def preprocess_recommendations(rec_df, community):
@@ -59,8 +60,8 @@ def _format_message(formatted_rec_list):
     '''Helper function to format a group of recommendations for a target document
     '''
     formatted_rec_string = '\n\n'.join(formatted_rec_list)
-    return "{} {}\n\n{}".format(
-        THREAD_BOT_CODE, THREAD_BOT_MSG, formatted_rec_string)
+    return "{} {}\n\n<i>{}</i>".format(
+        THREAD_BOT_CODE, formatted_rec_string, THREAD_BOT_MSG)
 
 
 def _agg_target_doc_group_row(target_doc_group_row, community):
