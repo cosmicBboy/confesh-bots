@@ -8,6 +8,12 @@ DREAM_FP=./data/dream_interpretations.csv
 MODEL_FP=./models/dream_bot_v
 DREAM_LOG=./dream_log.txt
 
+CRON_1=* * * * * cd /confesh-bots
+CRON_2=make -C dream_api run-dream-bot VERSION=2.7 DOMAIN=dreams >> /dream_bot_log.txt
+CRON_3=tail -n 5000 /dream_bot_log.txt > /dtmp.txt
+CRON_4=cat /dtmp.txt > /dream_bot_log.txt; rm /dtmp.txt
+CRON=$(CRON_1); $(CRON_2); $(CRON_3); $(CRON_4)
+
 run-dream-bot:
 	python -W ignore dream_bot.py -db $(DBNAME) \
 								  -c $(COLLECTION) \
@@ -56,14 +62,16 @@ docker-build:
 cron-setup:
 	apt-get install postfix heirloom-mailx
 
+echo-crontab-build:
+	@echo '$(CRON)'
+
 crontab-build:
 	echo 'SHELL=/bin/bash' | crontab
 	(crontab -l ; echo 'HOME=/') | crontab
 	(crontab -l ; echo 'PATH=$(PATH)') | crontab
 	(crontab -l ; echo 'MAILTO="root"') | crontab
 	(crontab -l ; echo '') | crontab
-	(crontab -l ; echo "* * * * * cd /confesh-bots; make -C dream_api run-dream-bot VERSION=2.7 DOMAIN=dreams >> /dream_b\
-ot_log.txt") | crontab
+	(crontab -l ; echo '$(CRON)') | crontab
 	(crontab -l ; echo '') | crontab
 
 cron-start:

@@ -5,6 +5,7 @@ COLLECTION=confession
 DATA_DIR=./tmp
 REC=$(DATA_DIR)/recommendations.csv
 PROCESSED_REC=$(DATA_DIR)/processed_recommendations.csv
+MODEL=model3
 
 # Default Communities
 TRAIN_COMM=www
@@ -22,9 +23,11 @@ PARAMS=-db $(DBNAME) \
 	   --query_community $(QUERY_COMM)
 
 # Cron Build
-CRON_BUILD_1=* * * * * cd /confesh-bots
-CRON_BUILD_2=make -C thread_api run-thread-bot
-CRON_BUILD=$(CRON_BUILD_1); $(CRON_BUILD_2) $(PARAMS)
+CRON_1=* * * * * cd /confesh-bots
+CRON_2=make -C thread_api run-thread-bot >> /threadbot_log.txt
+CRON_3=tail -n 5000 /threadbot_log.txt > /ttmp.txt
+CRON_4=cat /ttmp.txt > /threadbot_log.txt; rm /ttmp.txt
+CRON=$(CRON_1); $(CRON_2); $(CRON_3); $(CRON_4)
 
 clean:
 	rm ./*.pyc
@@ -51,10 +54,10 @@ run-thread-bot:
 	python -W ignore thread_cli.py $(PARAMS)
 
 echo-crontab-build:
-	@echo '$(CRON_BUILD)'
+	@echo '$(CRON)'
 
 crontab-build:
-	(crontab -l ; echo '$(CRON_BUILD)') | crontab
+	(crontab -l ; echo '$(CRON)') | crontab
 
 cron-start:
 	@echo 'awakening dreambot...'
