@@ -96,8 +96,8 @@ if __name__ == "__main__":
                    if not d['contains_threadbot_post']
                    and (d['bumped'] == True)]
     query_docs = [d for d in stream.iterate_secrets(query_cm, limit=0)
-                  if not d['hidden'] and
-                  not d['contains_threadbot_post']]
+                  if not d['hidden'] and not d['contains_threadbot_post'] and
+                  not d['contains_filter_out_avatar']]
     print 'TARGET DOCS:', len(target_docs)
     print 'QUERY DOCS:', len(query_docs)
 

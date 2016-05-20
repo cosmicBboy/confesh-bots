@@ -31,7 +31,7 @@ tp = TextPreprocessor()
 bitly_cacher = BitlyS3Cacher()
 
 THREAD_BOT_MSG = "When I see that post get bumped, just gotta recommend some "\
-                 "shit. Looong tap on mobile."
+                 "shit. Looong tap on read more link on mobile."
 THREAD_BOT_CODE = '!drake'
 
 
@@ -155,7 +155,7 @@ class Word2VecRecommender(object):
         grp = sim_df.groupby('r_doc_id')
         return grp.apply(self._rank_agg_func).reset_index(drop=True)
 
-    def _rank_agg_func(self, group, n=5):
+    def _rank_agg_func(self, group, n=3):
         grp = group.sort_values('sim', ascending=False)
         return grp.iloc[:n]
 

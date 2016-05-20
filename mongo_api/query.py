@@ -4,7 +4,7 @@ from pymongo import MongoClient
 from mongo_creds import domain, port
 from bson.objectid import ObjectId
 
-FIELD_LIST = ['_id', 'text', 'comments']
+FIELD_LIST = ['_id', 'text', 'comments', 'avatar']
 
 def create_confesh_stream(db_name, collection_name, query, **kwargs):
     coll_obj = fetch_collection(db_name, collection_name)
@@ -35,39 +35,42 @@ if __name__ == "__main__":
     # query = {'communities': 'bots'}
     # query = {'_id': ObjectId('56ef6601e4b07260f818b904')}
 
-    query_id = '5707ea43e4b07260f8193e02'
-    query = {'communities': 'www', '_id': ObjectId(query_id)}
+    query_id = '573e8d9be4b07260f81a4fb9'
+    query = {'communities': 'bots', '_id': ObjectId(query_id)}
     confesh_stream = create_confesh_stream('confesh-db', 'confession', query,
                                            n=None)
 
     # This removes comments that meet the conditional filters
     result_comment_ids = []
     for result in confesh_stream:
-        print result
-        comments = result.get('comments', None)
-        if comments:
-            # if there are comments in the post, then collect dream._ids
-            result_comments = [c for c in comments if
-                               c.get('avatar', None)]
-            ids = [c['_id'] for c in result_comments if
-                   c.get('avatar')['text'] == 'HelpulDrake' and
-                   c.get('timestamp') > DATETIME_THRES]
-            result_comment_ids.extend(ids)
+        for k, v in result.items():
+            print k
+            print v
+            print ''
+    #     comments = result.get('comments', None)
+    #     if comments:
+    #         # if there are comments in the post, then collect dream._ids
+    #         result_comments = [c for c in comments if
+    #                            c.get('avatar', None)]
+    #         ids = [c['_id'] for c in result_comments if
+    #                c.get('avatar')['text'] == 'HelpulDrake' and
+    #                c.get('timestamp') > DATETIME_THRES]
+    #         result_comment_ids.extend(ids)
 
-    # TODO: Functionalize this section
-    coll_obj = fetch_collection('confesh-db', 'confession')
-    coll_obj.update_one({'_id': ObjectId(query_id)},
-                        {'$pull': {'comments': {'_id': {"$in": result_comment_ids}}}})
+    # # TODO: Functionalize this section
+    # coll_obj = fetch_collection('confesh-db', 'confession')
+    # coll_obj.update_one({'_id': ObjectId(query_id)},
+    #                     {'$pull': {'comments': {'_id': {"$in": result_comment_ids}}}})
 
-    # Now need to update number of comments field based on length of comments array
-    coll_obj = fetch_collection('confesh-db', 'confession')
-    for result in coll_obj.find(query):
-        secret_id = str(result['_id'])
-        comments = result.get('comments', None)
-        if comments:
-            len_comments = len(comments)
-            coll_obj.update_one(
-                {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': len_comments}})
-        else:
-            coll_obj.update_one(
-                {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': 0}})
+    # # Now need to update number of comments field based on length of comments array
+    # coll_obj = fetch_collection('confesh-db', 'confession')
+    # for result in coll_obj.find(query):
+    #     secret_id = str(result['_id'])
+    #     comments = result.get('comments', None)
+    #     if comments:
+    #         len_comments = len(comments)
+    #         coll_obj.update_one(
+    #             {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': len_comments}})
+    #     else:
+    #         coll_obj.update_one(
+    #             {'_id': ObjectId(secret_id)}, {'$set': {'numberOfComments': 0}})

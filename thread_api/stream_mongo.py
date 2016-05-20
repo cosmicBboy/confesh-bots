@@ -17,6 +17,7 @@ from bson.objectid import ObjectId
 from itertools import chain
 
 TBOT = 'HelpfulDrake'
+FILTER_OUT_AVATARS = ['hotbuns']
 
 
 def _encode_utf(text):
@@ -43,9 +44,8 @@ class MongoStreamer(object):
 
     def _read_secrets(self, community_name, limit):
         query = {'communities': community_name}
-        projection = {'_id': 1, 'text': 1, 'comments': 1,
-                      'tags': 1, 'bumped': 1, 'views': 1,
-                      'status': 1}
+        projection = {'_id': 1, 'text': 1, 'comments': 1, 'avatar': 1,
+                      'tags': 1, 'bumped': 1, 'views': 1, 'status': 1}
         return self.client.find(query, projection, limit=limit)
 
     def _secret_and_comment_obj_handler(self, secret_obj):
@@ -97,6 +97,8 @@ class MongoStreamer(object):
             result['hidden'] = secret_obj.get('status', None) == 'HIDDEN'
             result['contains_threadbot_post'] = \
                 self._secret_contains_threadbot_post(secret_obj)
+            result['contains_filter_out_avatar'] = \
+                self._secret_contains_avatar_post(secret_obj)
         return result
 
     def _secret_contains_threadbot_post(self, secret_obj):
@@ -111,3 +113,17 @@ class MongoStreamer(object):
             return contains_threadbot_post
         else:
             return False
+
+    def _secret_contains_avatar_post(self, secret_obj):
+        '''Returns true if secret is authored by avatar in avatar_name_list
+        '''
+        avatar = secret_obj.get('avatar', None)
+        if avatar:
+            avatar_name = avatar.get('text', None)
+            if avatar_name in FILTER_OUT_AVATARS:
+                return True
+            else:
+                return False
+        else:
+            return False
+
