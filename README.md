@@ -1,4 +1,4 @@
-# Confesh Analytics
+# Confesh Bots
 
 # Prerequisites
 
