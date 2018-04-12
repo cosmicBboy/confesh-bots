@@ -10,7 +10,7 @@ Obtain Secrets from dreams.confesh.com
 
 Train a Word2Vec Model
 2.1 Concatenate dream secrets with dream corpus definition entries.
-2.2 Train a Word2Ven model using Gensim
+2.2 Train a Word2Vec model using Gensim
 
 Matching Dream Interpretations with Secrets
 3.1 tokenize the secret (unigrams and bigrams), remove stopwords, filter freq.
